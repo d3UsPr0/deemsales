@@ -1,0 +1,114 @@
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--primary); color: white">
+        <h5 class="modal-title"><i class="fas fa-check-circle"></i> Confirm Order Submission</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-bordered table-hover">
+            <thead style="background-color: var(--secondary); color: white">
+              <tr><th>#</th><th>Menu Item</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th><th>Category</th></tr>
+            </thead>
+            <tbody id="orderSummaryBody"></tbody>
+            <tfoot style="background-color: #f8f9fa; font-weight: bold">
+              <tr><td colspan="4" class="text-end">Total Items:</td><td colspan="2"><span id="totalItems" style="color: var(--primary); font-size: 1.2rem">0</span> items</td></tr>
+              <tr style="background-color: var(--accent); color: white"><td colspan="4" class="text-end">Grand Total:</td><td colspan="2"><span id="grandTotal" style="font-size: 1.3rem; font-weight: bold">0 /=</span></td></tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="row mt-3">
+          <div class="col-md-4"><div class="card border-success"><div class="card-body py-2"><small><i class="fas fa-user-tie"></i> <strong>Waiter:</strong></small><span id="summaryWaiter" class="ms-2 fw-bold" style="color: var(--primary)">Not selected</span></div></div></div>
+          <div class="col-md-4"><div class="card border-info"><div class="card-body py-2"><small><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong></small><span id="summaryLocation" class="ms-2 fw-bold" style="color: var(--primary)">Not set</span></div></div></div>
+          <div class="col-md-4"><div class="card border-warning"><div class="card-body py-2"><small><i class="fas fa-sticky-note"></i> <strong>Notes:</strong></small><span id="summaryNotes" class="ms-2 text-muted fst-italic">No notes</span></div></div></div>
+        </div>
+        <div id="noItemsWarning" class="alert alert-warning mt-3" style="display: none;"><i class="fas fa-exclamation-triangle"></i> <strong>No items selected!</strong></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmSubmit">Yes, Submit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header bg-danger text-white"><h5 class="modal-title">Delete Order</h5></div>
+    <div class="modal-body"><p>Are you sure?</p></div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+      <form id="deleteOrderForm" method="post">{% csrf_token %}<button type="submit" class="btn btn-danger">Delete</button></form>
+    </div>
+  </div></div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header" style="background-color: var(--accent); color: white"><h5 class="modal-title"><i class="fas fa-edit"></i> Edit Order</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <form id="editOrderForm" method="post">{% csrf_token %}<input type="hidden" name="order_id" id="editOrderId"/>
+        <div class="row">
+          <div class="col-md-6 mb-3"><label class="form-label fw-bold">Menu Item</label><select class="form-select" name="menu_item" id="editMenuItem">{% for item in menu_items %}<option value="{{ item.id }}">{{ item.name }} - {{ item.price }} /=</option>{% endfor %}</select></div>
+          <div class="col-md-3 mb-3"><label class="form-label fw-bold">Quantity</label><input type="number" class="form-control" name="quantity" id="editQuantity" min="1"/></div>
+          <div class="col-md-3 mb-3"><label class="form-label fw-bold">Waiter</label><select class="form-select" name="waiter" id="editWaiter"><option value="">-- Select --</option>{% for waiter in waiters %}<option value="{{ waiter.id }}">{{ waiter.display_name }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-map-marker-alt"></i> Location</label>
+            <div class="mb-2">
+              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_table" value="table"/><label for="edit_location_table">Table</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_takeaway" value="takeaway"/><label for="edit_location_takeaway">Takeaway</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_other" value="other"/><label for="edit_location_other">Other</label></div>
+            </div>
+            <input type="text" class="form-control" name="location_detail" id="editLocationDetail" placeholder="Table number or location name"/>
+          </div>
+          <div class="col-md-6 mb-3"><label class="form-label fw-bold">Notes</label><textarea class="form-control" name="notes" id="editNotes" rows="3"></textarea></div>
+        </div>
+        <div class="text-end"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning"><i class="fas fa-save"></i> Update</button></div>
+      </form>
+    </div>
+  </div></div>
+</div>
+
+<!-- Add to Order Modal -->
+<div class="modal fade" id="addToOrderModal" tabindex="-1">
+  <div class="modal-dialog modal-xl"><div class="modal-content">
+    <div class="modal-header" style="background-color: var(--secondary); color: white"><h5 class="modal-title"><i class="fas fa-plus-circle"></i> Add Items to Order</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-3">
+        <div class="row">
+          <div class="col-md-4"><strong><i class="fas fa-user-tie"></i> Waiter:</strong> <span id="addOrderWaiter">-</span></div>
+          <div class="col-md-4"><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> <span id="addOrderLocation">-</span></div>
+          <div class="col-md-4"><strong><i class="fas fa-money-bill"></i> Current Total:</strong> <span id="addOrderCurrentTotal">0 /=</span></div>
+        </div>
+        <div class="mt-2"><strong><i class="fas fa-list"></i> Existing Items:</strong><div id="addOrderExistingItems" class="mt-1"></div></div>
+        <div class="mt-2" id="addOrderNotesContainer" style="display:none;"><strong><i class="fas fa-sticky-note"></i> Notes:</strong> <span id="addOrderNotes" class="text-muted fst-italic"></span></div>
+      </div>
+      <form id="addToOrderForm" method="post">{% csrf_token %}
+        <fieldset class="mb-4">
+          <legend style="background-color: var(--accent); color: white; padding: 5px 15px; border-radius: 5px;">Select Additional Items</legend>
+          <div class="row">
+            {% for category in categories %}
+            <div class="col-md-6 col-lg-3 mb-3"><div class="card h-100"><div class="card-header" style="background-color: var(--primary); color: white">{{ category.name }}</div><div class="card-body">
+              {% for item in menu_items %}{% if item.category_id == category.id %}
+              <div class="d-flex align-items-center mb-2">
+                <input type="checkbox" name="item_{{ item.id }}" id="add_item_{{ item.id }}" class="form-check-input me-2 add-menu-checkbox" data-item-id="{{ item.id }}"/>
+                <label for="add_item_{{ item.id }}" class="flex-grow-1">{{ item.name }}</label>
+                <span class="badge" style="background-color: var(--primary)">{{ item.price }} /=</span>
+                <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}" class="form-control form-control-sm ms-2" style="width:60px" value="1" min="1" disabled/>
+              </div>
+              {% endif %}{% endfor %}
+            </div></div></div>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <div class="text-end"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success btn-lg"><i class="fas fa-plus-circle"></i> Add to Order</button></div>
+      </form>
+    </div>
+  </div></div>
+</div>
