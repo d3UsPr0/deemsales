@@ -93,8 +93,18 @@ def home_view(request):
         # Create group data with combined items
         combined_list = list(combined_items.values())
         
+                # Determine payment status
+        all_closed = all(order.status == 'closed' for order in orders)
+        any_closed = any(order.status == 'closed' for order in orders)
+        if all_closed:
+            payment_status = 'closed'
+        elif any_closed:
+            payment_status = 'partial'
+        else:
+            payment_status = 'open'
+
         group_data = {
-            'order_number': order_number,  # Sequential order number
+            'order_number': order_number,
             'session_id': session_key,
             'combined_items': combined_list,
             'created_at': orders[0].created_at,
@@ -106,10 +116,11 @@ def home_view(request):
             'notes': orders[0].notes if orders[0].notes else '',
             'total_quantity': sum(item['quantity'] for item in combined_list),
             'total_amount': sum(item['total_price'] for item in combined_list),
-            'item_count': len(combined_list),  # Number of unique items
+            'item_count': len(combined_list),
             'is_group': len(orders) > 1 or len(combined_list) > 1,
             'first_order_id': orders[-1].id,
             'last_order_id': orders[0].id,
+            'payment_status': payment_status,
         }
         grouped_orders.append(group_data)
         order_number += 1
@@ -122,6 +133,15 @@ def home_view(request):
     
     # Calculate total collection for today
     total_collection = today_orders.aggregate(total=Sum('total_price'))['total'] or 0
+        # Count open/closed
+    open_count = 0
+    closed_count = 0
+    for session_key, orders in session_groups.items():
+        if all(order.status == 'closed' for order in orders):
+            closed_count += 1
+        else:
+            open_count += 1
+
     context = {
         'categories': categories,
         'menu_items': menu_items,
@@ -131,6 +151,8 @@ def home_view(request):
         'today': today,
         'total_orders_count': today_orders.count(),
         'total_sessions': len(grouped_orders),
+        'open_count': open_count,
+        'closed_count': closed_count,
     }
     
     return render(request, 'sales/home.html', context)
@@ -337,8 +359,8 @@ def export_excel(request):
     title_cell.alignment = Alignment(horizontal='center')
     
     # Headers
-    headers = ['Order ID', 'Menu Item', 'Category', 'Quantity', 'Unit Price (TZS)', 
-           'Total (TZS)', 'Waiter', 'Location Type', 'Location Detail', 'Notes']
+    headers = ['Order #', 'Menu Items', 'Total Items', 'Total Qty', 'Total Amount (TZS)', 
+               'Waiter', 'Location', 'Status', 'Notes', 'Created By', 'Time']
     for col, header in enumerate(headers, 1):
         cell = ws.cell(row=3, column=col, value=header)
         cell.font = white_font
@@ -346,32 +368,97 @@ def export_excel(request):
         cell.border = border
         cell.alignment = Alignment(horizontal='center')
     
-    # Data
-    total_amount = 0
-    for row, order in enumerate(orders, 4):
-        ws.cell(row=row, column=1, value=order.id).border = border
-        ws.cell(row=row, column=2, value=order.menu_item.name).border = border
-        ws.cell(row=row, column=3, value=order.menu_item.category.name).border = border
-        ws.cell(row=row, column=4, value=order.quantity).border = border
-        ws.cell(row=row, column=5, value=float(order.unit_price)).border = border
-        ws.cell(row=row, column=6, value=float(order.total_price)).border = border
-        ws.cell(row=row, column=7, value=order.waiter.display_name if order.waiter else 'N/A').border = border
-        ws.cell(row=row, column=8, value=order.notes or '').border = border
-        ws.cell(row=row, column=8, value=order.get_location_type_display()).border = border
-        ws.cell(row=row, column=9, value=order.location_detail or '').border = border
-        ws.cell(row=row, column=10, value=order.notes or '').border = border
+        # Group orders by session_id for combined display
+    from collections import defaultdict
+    session_groups = defaultdict(list)
+    for order in orders:
+        session_key = order.session_id if order.session_id else f"single_{order.id}"
+        session_groups[session_key].append(order)
+    
+    # Data - grouped by order session
+    row = 4
+    order_num = 1
+    grand_total = 0
+    
+    for session_key, group_orders in session_groups.items():
+        # Sort orders within group
+        group_orders.sort(key=lambda x: x.created_at)
         
-        total_amount += float(order.total_price)
+        # Combine menu items into one string
+        from collections import OrderedDict as OD
+        combined = OD()
+        for o in group_orders:
+            key = o.menu_item.name
+            if key in combined:
+                combined[key] += o.quantity
+            else:
+                combined[key] = o.quantity
+        
+        menu_items_str = ", ".join([f"{name} ×{qty}" if qty > 1 else name for name, qty in combined.items()])
+        
+        total_qty = sum(o.quantity for o in group_orders)
+        total_amount = sum(float(o.total_price) for o in group_orders)
+        grand_total += total_amount
+        
+        first_order = group_orders[0]
+        
+        # Status
+        all_closed = all(o.status == 'closed' for o in group_orders)
+        any_closed = any(o.status == 'closed' for o in group_orders)
+        if all_closed:
+            status = 'Closed'
+        elif any_closed:
+            status = 'Mixed'
+        else:
+            status = 'Open'
+        
+        # Location
+        if first_order.location_type == 'other':
+            location = first_order.location_detail or 'Other'
+        elif first_order.location_detail:
+            location = f"{first_order.get_location_type_display()} #{first_order.location_detail}"
+        else:
+            location = first_order.get_location_type_display()
+        
+        # Waiter
+        waiter_name = first_order.waiter.display_name if first_order.waiter else 'N/A'
+        
+        ws.cell(row=row, column=1, value=f"#{order_num}").border = border
+        ws.cell(row=row, column=2, value=menu_items_str).border = border
+        ws.cell(row=row, column=3, value=len(combined)).border = border
+        ws.cell(row=row, column=4, value=total_qty).border = border
+        ws.cell(row=row, column=5, value=total_amount).border = border
+        ws.cell(row=row, column=6, value=waiter_name).border = border
+        ws.cell(row=row, column=7, value=location).border = border
+        ws.cell(row=row, column=8, value=status).border = border
+        ws.cell(row=row, column=9, value=first_order.notes or '').border = border
+        ws.cell(row=row, column=10, value=first_order.created_by.username).border = border
+        ws.cell(row=row, column=11, value=first_order.created_at.strftime('%H:%M')).border = border
+        
+        # Color the status cell
+        status_cell = ws.cell(row=row, column=8)
+        if status == 'Closed':
+            status_cell.fill = PatternFill(start_color="c6efce", end_color="c6efce", fill_type="solid")
+            status_cell.font = Font(color="006100")
+        elif status == 'Open':
+            status_cell.fill = PatternFill(start_color="ffc7ce", end_color="ffc7ce", fill_type="solid")
+            status_cell.font = Font(color="9c0006")
+        else:
+            status_cell.fill = PatternFill(start_color="ffeb9c", end_color="ffeb9c", fill_type="solid")
+            status_cell.font = Font(color="9c6500")
+        
+        row += 1
+        order_num += 1
     
     # Summary row
-    summary_row = len(orders) + 4
-    ws.merge_cells(f'A{summary_row}:E{summary_row}')
+    summary_row = row
+    ws.merge_cells(f'A{summary_row}:D{summary_row}')
     summary_cell = ws.cell(row=summary_row, column=1, value="TOTAL COLLECTION")
     summary_cell.font = Font(bold=True, size=12)
     summary_cell.fill = accent_fill
     summary_cell.border = border
     
-    total_cell = ws.cell(row=summary_row, column=6, value=total_amount)
+    total_cell = ws.cell(row=summary_row, column=5, value=grand_total)
     total_cell.font = Font(bold=True, size=12, color="540b02")
     total_cell.fill = accent_fill
     total_cell.border = border
@@ -402,8 +489,10 @@ def export_excel(request):
     
     # Adjust column widths
     for ws_obj in [ws, ws2]:
-        for col in range(1, 9):
+        for col in range(1, 12):
             ws_obj.column_dimensions[get_column_letter(col)].width = 20
+    # Make menu items column wider
+    ws.column_dimensions['B'].width = 45
     
     # Create response
     response = HttpResponse(
@@ -506,5 +595,28 @@ def add_to_order(request, session_id):
         except Exception as e:
             messages.error(request, f'Error adding items: {str(e)}')
             return redirect('home')
+    
+    return redirect('home')
+
+@login_required
+def toggle_group_status(request, session_id):
+    """Toggle Open/Closed status for entire order group"""
+    if request.method == 'POST':
+        orders = Order.objects.filter(session_id=session_id)
+        if orders.exists():
+            all_closed = all(order.status == 'closed' for order in orders)
+            
+            if all_closed:
+                orders.update(status='open', closed_at=None)
+                status_msg = f'Order Reopened! ({orders.count()} items)'
+            else:
+                orders.update(status='closed', closed_at=timezone.now())
+                status_msg = f'Order Closed! ({orders.count()} items)'
+            
+            # Check if it's an AJAX request
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'message': status_msg})
+            
+            messages.success(request, status_msg)
     
     return redirect('home')

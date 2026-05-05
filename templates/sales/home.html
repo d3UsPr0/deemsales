@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-
+{% load humanize %}
 {% block content %}
 <!-- Full Width Order Entry Form -->
 <div class="row">
@@ -36,8 +36,8 @@
                           {{ item.name }}
                         </label>
                         <span class="badge" style="background-color: var(--primary)">
-                          {{ item.price }} /=
-                        </span>
+  {{ item.price|floatformat:"0"|intcomma }}
+</span>
                         <input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}"
                                class="form-control form-control-sm ms-2" style="width: 60px"
                                value="1" min="1" disabled/>
@@ -57,19 +57,27 @@
               Section 2: Waiter & Location
             </legend>
             <div class="row">
-              <!-- Waiter Selection -->
+              
+                              <!-- Waiter Selection -->
               <div class="col-md-6 mb-3">
                 <label class="form-label fw-bold">
                   <i class="fas fa-user-tie"></i> Select Waiter <span class="text-danger">*</span>
                 </label>
-                <select class="form-select" name="waiter" id="waiter" required>
-                  <option value="">-- Select Waiter --</option>
-                  {% for waiter in waiters %}
-                  <option value="{{ waiter.id }}">
-                    {{ waiter.display_name }} ({{ waiter.full_name }})
-                  </option>
-                  {% endfor %}
-                </select>
+                <div class="card">
+                  <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                      {% for waiter in waiters %}
+                      <div class="form-check">
+                        <input class="form-check-input waiter-radio" type="radio" 
+                               name="waiter" id="waiter_{{ waiter.id }}" value="{{ waiter.id }}" required>
+                        <label class="form-check-label" for="waiter_{{ waiter.id }}">
+                          {{ waiter.display_name }}
+                        </label>
+                      </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Location Selection -->
@@ -121,25 +129,19 @@
             </div>
           </fieldset>
 
-          <!-- Section 3: Notes -->
+            <!-- Section 3: Notes -->
           <fieldset class="mb-4">
             <legend style="background-color: var(--accent); color: white; padding: 5px 15px; border-radius: 5px;">
               Section 3: Notes
             </legend>
-            <div class="row">
-              <div class="col-md-6">
-                <textarea class="form-control" name="notes" rows="3"
-                          placeholder="Any additional information about this order..."></textarea>
-              </div>
-            </div>
+            <textarea class="form-control" name="notes" rows="3"
+                      placeholder="Any additional information about this order..."></textarea>
           </fieldset>
 
-          <!-- Submit Button -->
-          <div class="text-end">
-            <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#confirmModal">
-              <i class="fas fa-save"></i> Submit Order
-            </button>
-          </div>
+                    <!-- Submit Button -->
+          <button type="button" class="btn btn-primary btn-lg w-100 mt-3" data-bs-toggle="modal" data-bs-target="#confirmModal">
+            <i class="fas fa-save"></i> Submit Order
+          </button>
         </form>
       </div>
     </div>
@@ -170,6 +172,7 @@
             <th width="10%">Amount</th>
             <th width="10%">Waiter</th>
             <th width="10%">Location</th>
+            <th width="8%">Status</th>
             <th width="8%">By</th>
             <th width="12%">Actions</th>
           </tr>
@@ -212,7 +215,7 @@
 
             <td>
               <span class="fw-bold fs-6" style="color: var(--secondary)">
-                {{ group.total_amount|floatformat:0 }} /=
+                {{ group.total_amount|floatformat:"0"|intcomma }}
               </span>
             </td>
 
@@ -239,7 +242,21 @@
               </span>
               {% endif %}
             </td>
-
+                        <td class="text-center">
+              {% if group.payment_status == 'closed' %}
+              <button class="btn btn-sm toggle-group-status" data-session-id="{{ group.session_id }}" 
+                      style="background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 5px 10px; font-weight: bold;"
+                      title="Click to reopen">CLOSED</button>
+              {% elif group.payment_status == 'partial' %}
+              <button class="btn btn-sm toggle-group-status" data-session-id="{{ group.session_id }}"
+                      style="background-color: #ffc107; color: #000; border: none; border-radius: 20px; padding: 5px 10px; font-weight: bold;"
+                      title="Click to close all">MIXED</button>
+              {% else %}
+              <button class="btn btn-sm toggle-group-status" data-session-id="{{ group.session_id }}"
+                      style="background-color: #dc3545; color: white; border: none; border-radius: 20px; padding: 5px 10px; font-weight: bold;"
+                      title="Click to close">OPEN</button>
+              {% endif %}
+            </td>
             <td>
               <small class="text-muted">
                 <i class="fas fa-user-edit"></i> {{ group.created_by.username }}
@@ -307,7 +324,7 @@
 
           {% if group.item_count > 1 %}
           <tr class="group-details" id="details-{{ group.session_id }}" style="display: none;">
-            <td colspan="9" class="bg-light">
+            <td colspan="10" class="bg-light">
               <div class="p-2">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                   <strong>
@@ -355,8 +372,8 @@
                         <td class="text-center">
                           <span class="badge bg-primary fs-6">{{ item.quantity }}</span>
                         </td>
-                        <td class="text-end">{{ item.unit_price|floatformat:0 }} /=</td>
-                        <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:0 }} /=</td>
+                        <td class="text-end">{{ item.unit_price|floatformat:"0"|intcomma }}</td>
+                        <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:"0"|intcomma }}</td>
                         <td>
                           <div class="btn-group btn-group-sm">
                             <button class="btn btn-outline-warning edit-order" data-order-id="{{ item.order_ids.0 }}" title="Edit this item">
@@ -377,7 +394,7 @@
                         <td colspan="3">Total</td>
                         <td class="text-center">{{ group.total_quantity }}</td>
                         <td></td>
-                        <td class="text-end">{{ group.total_amount|floatformat:0 }} /=</td>
+                        <td class="text-end">{{ group.total_amount|floatformat:"0"|intcomma }}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -390,7 +407,7 @@
           
           {% empty %}
           <tr>
-            <td colspan="9" class="text-center py-5 text-muted">
+            <td colspan="10" class="text-center py-5 text-muted">
               <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
               <p class="fs-5">No orders recorded today yet.</p>
               <p>Start by selecting menu items above and submitting your first order!</p>
@@ -404,39 +421,92 @@
 </div>
 
 <!-- Today's Summary Footer -->
-<div class="card shadow mt-4 mb-4" style="background: linear-gradient(135deg, var(--primary), #8b1a0a); color: white; border-radius: 10px;">
+<div class="card shadow mt-4 mb-4"
+     style="background: linear-gradient(135deg, var(--primary), #8b1a0a); color: white; border-radius: 12px;">
+  
   <div class="card-body">
-    <div class="row text-center align-items-center">
-      <div class="col-md-3">
-        <i class="fas fa-receipt fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-        <h6 class="text-uppercase mb-1">Total Orders</h6>
-        <h3 class="fw-bold mb-0" style="color: var(--accent)">{{ total_sessions }}</h3>
+    
+    <div class="row text-center g-3 align-items-stretch">
+      
+      <!-- Total Orders -->
+      <div class="col-md-2">
+        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.05);">
+          <i class="fas fa-receipt fa-2x mb-2 d-block" style="color: var(--accent)"></i>
+          <h6 class="text-uppercase mb-1">Total Orders</h6>
+          <h3 class="fw-bold mb-0" style="color: var(--accent)">
+            {{ total_sessions }}
+          </h3>
+        </div>
       </div>
-      <div class="col-md-3">
-        <i class="fas fa-utensils fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-        <h6 class="text-uppercase mb-1">Items Sold</h6>
-        <h3 class="fw-bold mb-0" style="color: var(--accent)">{{ total_orders_count }}</h3>
+
+      <!-- Items Sold -->
+      <div class="col-md-2">
+        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.05);">
+          <i class="fas fa-utensils fa-2x mb-2 d-block" style="color: var(--accent)"></i>
+          <h6 class="text-uppercase mb-1">Items Sold</h6>
+          <h3 class="fw-bold mb-0" style="color: var(--accent)">
+            {{ total_orders_count }}
+          </h3>
+        </div>
       </div>
-      <div class="col-md-3">
-        <i class="fas fa-users fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-        <h6 class="text-uppercase mb-1">Active Waiters</h6>
-        <h3 class="fw-bold mb-0" style="color: var(--accent)">{{ waiters|length }}</h3>
+
+      <!-- Closed -->
+      <div class="col-md-2">
+        <div class="h-100 p-3 rounded" style="background: rgba(40,167,69,0.15);">
+          <i class="fas fa-lock fa-2x mb-2 d-block" style="color: #28a745;"></i>
+          <h6 class="text-uppercase mb-1">Closed</h6>
+          <h3 class="fw-bold mb-0" style="color: #28a745;">
+            {{ closed_count|default:"0" }}
+          </h3>
+        </div>
       </div>
-      <div class="col-md-3">
-        <i class="fas fa-money-bill-wave fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-        <h6 class="text-uppercase mb-1">Today's Collection</h6>
-        <h2 class="fw-bold mb-0" style="color: #ffffff">
-          {{ total_collection|floatformat:0 }} <small style="font-size: 0.6em">TZS</small>
-        </h2>
+
+      <!-- Open -->
+      <div class="col-md-2">
+        <div class="h-100 p-3 rounded" style="background: rgba(220,53,69,0.15);">
+          <i class="fas fa-lock-open fa-2x mb-2 d-block" style="color: #dc3545;"></i>
+          <h6 class="text-uppercase mb-1">Open</h6>
+          <h3 class="fw-bold mb-0" style="color: #dc3545;">
+            {{ open_count|default:"0" }}
+          </h3>
+        </div>
       </div>
+
+      <!-- Active Waiters -->
+      <div class="col-md-2">
+        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.05);">
+          <i class="fas fa-users fa-2x mb-2 d-block" style="color: var(--accent)"></i>
+          <h6 class="text-uppercase mb-1">Active Waiters</h6>
+          <h3 class="fw-bold mb-0" style="color: var(--accent)">
+            {{ waiters|length }}
+          </h3>
+        </div>
+      </div>
+
+      <!-- Today's Collection -->
+      <div class="col-md-2">
+        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.08);">
+          <i class="fas fa-money-bill-wave fa-2x mb-2 d-block" style="color: var(--accent)"></i>
+          <h6 class="text-uppercase mb-1">Today</h6>
+          <h2 class="fw-bold mb-0 text-white">
+            {{ total_collection|floatformat:"0"|intcomma }}
+          </h2>
+        </div>
+      </div>
+
     </div>
-    <hr style="border-color: rgba(255, 255, 255, 0.2)"/>
+
+    <hr style="border-color: rgba(255,255,255,0.2);"/>
+
     <div class="text-center">
       <small>
-        <i class="far fa-calendar-alt"></i> {{ today|date:"l, F j, Y" }} | 
-        <i class="far fa-clock"></i> Current Time: {% now "H:i" %}
+        <i class="far fa-calendar-alt"></i>
+        {{ today|date:"l, F j, Y" }} |
+        <i class="far fa-clock"></i>
+        Current Time: {% now "H:i" %}
       </small>
     </div>
+
   </div>
 </div>
 
@@ -735,6 +805,23 @@
 {% block extra_scripts %}
 <script>
 $(document).ready(function () {
+      // Restore scroll position instantly (no visible scroll)
+    var savedPos = localStorage.getItem('scrollPos');
+    if (savedPos) {
+        localStorage.removeItem('scrollPos');
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.scrollTo(0, parseInt(savedPos));
+    }
+
+    // Scroll to orders table only for new submissions
+    if (localStorage.getItem('scrollToOrders') === 'true') {
+        localStorage.removeItem('scrollToOrders');
+        setTimeout(function() {
+            $('html, body').scrollTop($('.card-header:contains("Latest Orders")').offset().top - 80);
+        }, 50);
+    }
     // Enable/disable quantity on checkbox toggle
     $(".menu-checkbox").change(function () {
         var itemId = $(this).data("item-id");
@@ -814,7 +901,7 @@ $(document).ready(function () {
         $("#totalItems").text(itemCount);
         $("#grandTotal").text(grandTotal.toLocaleString() + " /=");
 
-        var waiterName = $('select[name="waiter"] option:selected').text();
+            var waiterName = $('input[name="waiter"]:checked').closest('.form-check').find('.form-check-label').text().trim();
         var locationType = $('input[name="location_type"]:checked').val();
         var locationDetail = $('#location_detail').val();
         var notes = $('textarea[name="notes"]').val() || "No notes";
@@ -843,8 +930,9 @@ $(document).ready(function () {
         }
     });
 
-    // Submit form
+        // Submit form - scroll to orders table after submission
     $("#confirmSubmit").click(function () {
+        localStorage.setItem('scrollToOrders', 'true');
         $("#orderForm").submit();
     });
 
@@ -855,10 +943,11 @@ $(document).ready(function () {
         detailsRow.toggle();
     });
 
-    // Delete group
+        // Delete group
     $(".delete-group").click(function () {
         var sessionId = $(this).data("session-id");
         if (confirm("Delete this entire order? This cannot be undone!")) {
+            localStorage.setItem('scrollPos', $(window).scrollTop());
             var form = $('<form method="post" action="/delete-group/' + sessionId + '/"></form>');
             form.append('{% csrf_token %}');
             $("body").append(form);
@@ -870,6 +959,7 @@ $(document).ready(function () {
     $(".delete-order").click(function () {
         var orderId = $(this).data("order-id");
         if (confirm("Delete this order?")) {
+            localStorage.setItem('scrollPos', $(window).scrollTop());
             var form = $('<form method="post" action="/delete-order/' + orderId + '/"></form>');
             form.append('{% csrf_token %}');
             $("body").append(form);
@@ -905,6 +995,10 @@ $(document).ready(function () {
             $("#editOrderForm").attr("action", "/update-order/" + orderId + "/");
             $("#editModal").modal("show");
         });
+            // Save scroll position before updating order
+    $("#editOrderForm").on("submit", function() {
+        localStorage.setItem('scrollPos', $(window).scrollTop());
+    });
     });
 });
 // Add to existing order
@@ -967,6 +1061,10 @@ $(".add-to-group").click(function(e) {
         // Show modal
         $("#addToOrderModal").modal('show');
     });
+        // Save scroll position before adding items to order
+    $("#addToOrderForm").on("submit", function() {
+        localStorage.setItem('scrollPos', $(window).scrollTop());
+    });
 });
 
 // Enable/disable quantity inputs in add modal
@@ -974,5 +1072,27 @@ $(".add-menu-checkbox").change(function() {
     var itemId = $(this).data('item-id');
     $("#add_quantity_" + itemId).prop('disabled', !$(this).is(':checked'));
 });
+        // Toggle Open/Closed status using AJAX
+    $(document).on("click", ".toggle-group-status", function (e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var sessionId = $btn.data("session-id");
+        var scrollPosition = $(window).scrollTop();
+        
+        $.ajax({
+            url: "/toggle-group-status/" + sessionId + "/",
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            success: function(response) {
+                // Reload the page but maintain scroll position
+                location.reload();
+            },
+            error: function() {
+                alert("Error toggling status. Please try again.");
+            }
+        });
+    });
 </script>
 {% endblock %}

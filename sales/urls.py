@@ -14,5 +14,6 @@ urlpatterns = [
     path('view-group/<str:session_id>/', views.view_group_orders, name='view_group_orders'),
     path('order-group-info/<str:session_id>/', views.get_order_group_info, name='order_group_info'),
     path('add-to-order/<str:session_id>/', views.add_to_order, name='add_to_order'),
+    path('toggle-group-status/<str:session_id>/', views.toggle_group_status, name='toggle_group_status'),
     
 ]

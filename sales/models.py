@@ -57,6 +57,8 @@ class Order(models.Model):
     location_type = models.CharField(max_length=20, choices=LOCATION_CHOICES, default='table')
     location_detail = models.CharField(max_length=100, blank=True, null=True, help_text="Table number, takeaway number, or other location")
     notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=10, choices=[('open', 'Open'), ('closed', 'Closed')], default='open')
+    closed_at = models.DateTimeField(null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
