@@ -1,45 +1,44 @@
 {% extends 'base.html' %}
 {% load humanize %}
+
 {% block content %}
 <!-- Full Width Order Entry Form -->
 <div class="row">
   <div class="col-12">
-    <div class="card shadow mb-4">
-      <div class="card-header" style="background-color: var(--primary); color: white">
-        <h5 class="mb-0">
+    <div class="card shadow mb-3">
+      <div class="card-header" style="background-color: var(--primary); color: white; padding: 8px 15px;">
+        <h5 class="mb-0" style="font-size:14px; font-weight:700;">
           <i class="fas fa-clipboard-list"></i> New Order Entry
         </h5>
       </div>
-      <div class="card-body">
+      <div class="card-body" style="padding: 12px 15px;">
         <form id="orderForm" method="post" action="{% url 'submit_orders' %}">
           {% csrf_token %}
 
           <!-- Section 1: Menu Items -->
-          <fieldset class="mb-4">
-            <legend style="background-color: var(--accent); color: white; padding: 5px 15px; border-radius: 5px;">
-              Section 1: Select Menu Items
-            </legend>
-            <div class="row">
+          <fieldset>
+            <legend><i class="fas fa-utensils section-icon"></i> Section 1: Select Menu Items</legend>
+            <div class="row g-2">
               {% for category in categories %}
-              <div class="col-md-6 col-lg-3 mb-3">
+              <div class="col-md-6 col-lg-3">
                 <div class="card h-100">
-                  <div class="card-header" style="background-color: var(--secondary); color: white">
+                  <div class="card-header" style="background-color: var(--secondary); color: white;">
                     {{ category.name }}
                   </div>
                   <div class="card-body">
                     {% for item in menu_items %}
                       {% if item.category_id == category.id %}
-                      <div class="d-flex align-items-center mb-2">
-                        <input type="checkbox" name="item_{{ item.id }}" id="item_{{ item.id }}"
-                               class="form-check-input me-2 menu-checkbox" data-item-id="{{ item.id }}"/>
-                        <label for="item_{{ item.id }}" class="flex-grow-1">
-                          {{ item.name }}
-                        </label>
-                        <span class="badge" style="background-color: var(--primary)">
-  {{ item.price|floatformat:"0"|intcomma }}
-</span>
+                      <div class="menu-item-row">
+                        <div class="form-check">
+                          <input type="checkbox" name="item_{{ item.id }}" id="item_{{ item.id }}"
+                                 class="form-check-input menu-checkbox" data-item-id="{{ item.id }}"/>
+                          <label for="item_{{ item.id }}" class="form-check-label" title="{{ item.name }}">
+                            {{ item.name }}
+                          </label>
+                        </div>
+                        <span class="menu-item-price">{{ item.price|floatformat:"0"|intcomma }}/=</span>
                         <input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}"
-                               class="form-control form-control-sm ms-2" style="width: 60px"
+                               class="form-control form-control-sm quantity-input"
                                value="1" min="1" disabled/>
                       </div>
                       {% endif %}
@@ -52,75 +51,56 @@
           </fieldset>
 
           <!-- Section 2: Waiter and Location -->
-          <fieldset class="mb-4">
-            <legend style="background-color: var(--accent); color: white; padding: 5px 15px; border-radius: 5px;">
-              Section 2: Waiter & Location
-            </legend>
-            <div class="row">
-              
-                              <!-- Waiter Selection -->
-              <div class="col-md-6 mb-3">
-                <label class="form-label fw-bold">
-                  <i class="fas fa-user-tie"></i> Select Waiter <span class="text-danger">*</span>
-                </label>
+          <fieldset>
+            <legend><i class="fas fa-user-tie section-icon"></i> Section 2: Waiter & Location</legend>
+            <div class="row g-2">
+              <!-- Waiter Selection -->
+              <div class="col-md-6">
+                <label class="form-label"><i class="fas fa-user-tie"></i> Select Waiter <span class="text-danger">*</span></label>
                 <div class="card">
-                  <div class="card-body">
-                    <div class="d-flex flex-wrap gap-2">
-                      {% for waiter in waiters %}
-                      <div class="form-check">
-                        <input class="form-check-input waiter-radio" type="radio" 
-                               name="waiter" id="waiter_{{ waiter.id }}" value="{{ waiter.id }}" required>
-                        <label class="form-check-label" for="waiter_{{ waiter.id }}">
-                          {{ waiter.display_name }}
-                        </label>
-                      </div>
-                      {% endfor %}
+                  <div class="card-body waiter-radio-group" style="padding: 8px 12px;">
+                    {% for waiter in waiters %}
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input waiter-radio" type="radio" 
+                             name="waiter" id="waiter_{{ waiter.id }}" value="{{ waiter.id }}" required>
+                      <label class="form-check-label" for="waiter_{{ waiter.id }}">
+                        {{ waiter.display_name }}
+                      </label>
                     </div>
+                    {% endfor %}
                   </div>
                 </div>
               </div>
 
               <!-- Location Selection -->
               <div class="col-md-6">
-                <label class="form-label fw-bold">
-                  <i class="fas fa-map-marker-alt"></i> Location <span class="text-danger">*</span>
-                </label>
+                <label class="form-label"><i class="fas fa-map-marker-alt"></i> Location <span class="text-danger">*</span></label>
                 <div class="card">
-                  <div class="card-body">
-                    <div class="mb-2">
+                  <div class="card-body" style="padding: 8px 12px;">
+                    <div class="mb-1">
                       <div class="form-check form-check-inline">
                         <input class="form-check-input location-radio" type="radio" 
                                name="location_type" id="location_table" value="table" checked/>
-                        <label class="form-check-label" for="location_table">
-                          <i class="fas fa-chair"></i> Table
-                        </label>
+                        <label class="form-check-label" for="location_table"><i class="fas fa-chair"></i> Table</label>
                       </div>
                       <div class="form-check form-check-inline">
                         <input class="form-check-input location-radio" type="radio" 
                                name="location_type" id="location_takeaway" value="takeaway"/>
-                        <label class="form-check-label" for="location_takeaway">
-                          <i class="fas fa-shopping-bag"></i> Takeaway
-                        </label>
+                        <label class="form-check-label" for="location_takeaway"><i class="fas fa-shopping-bag"></i> Takeaway</label>
                       </div>
                       <div class="form-check form-check-inline">
                         <input class="form-check-input location-radio" type="radio" 
                                name="location_type" id="location_other" value="other"/>
-                        <label class="form-check-label" for="location_other">
-                          <i class="fas fa-ellipsis-h"></i> Other
-                        </label>
+                        <label class="form-check-label" for="location_other"><i class="fas fa-ellipsis-h"></i> Other</label>
                       </div>
                     </div>
-
-                    <div id="locationDetailGroup">
-                      <label class="form-label small">
-                        <span id="locationDetailLabel">Table Number</span>
-                      </label>
-                      <div class="input-group">
-                        <span class="input-group-text" style="background-color: var(--primary); color: white">
+                    <div id="locationDetailGroup" class="mt-1">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text" style="background-color: var(--primary); color: white; font-size:12px;">
                           <i class="fas fa-hashtag"></i>
                         </span>
-                        <input type="text" class="form-control" name="location_detail" 
-                               id="location_detail" placeholder="Enter table number (optional)" maxlength="100"/>
+                        <input type="text" class="form-control form-control-sm" name="location_detail" 
+                               id="location_detail" placeholder="Table number (optional)" maxlength="100" style="font-size:12px;"/>
                       </div>
                     </div>
                   </div>
@@ -129,17 +109,15 @@
             </div>
           </fieldset>
 
-            <!-- Section 3: Notes -->
-          <fieldset class="mb-4">
-            <legend style="background-color: var(--accent); color: white; padding: 5px 15px; border-radius: 5px;">
-              Section 3: Notes
-            </legend>
-            <textarea class="form-control" name="notes" rows="3"
-                      placeholder="Any additional information about this order..."></textarea>
+          <!-- Section 3: Notes -->
+          <fieldset>
+            <legend><i class="fas fa-sticky-note section-icon"></i> Section 3: Notes</legend>
+            <textarea class="form-control" name="notes" rows="2"
+                      placeholder="Any additional information about this order..." style="font-size:13px;"></textarea>
           </fieldset>
 
-                    <!-- Submit Button -->
-          <button type="button" class="btn btn-primary btn-lg w-100 mt-3" data-bs-toggle="modal" data-bs-target="#confirmModal">
+          <!-- Submit Button -->
+          <button type="button" class="btn btn-primary btn-lg w-100 mt-2" data-bs-toggle="modal" data-bs-target="#confirmModal">
             <i class="fas fa-save"></i> Submit Order
           </button>
         </form>
@@ -149,15 +127,15 @@
 </div>
 
 <!-- Recent Orders - Combined Display -->
-<div class="card shadow mt-4">
+<div class="card shadow mt-3">
   <div class="card-header d-flex justify-content-between align-items-center" 
-       style="background-color: var(--primary); color: white">
-    <h5 class="mb-0">
+       style="background-color: var(--primary); color: white; padding: 8px 15px;">
+    <h5 class="mb-0" style="font-size:14px; font-weight:700;">
       <i class="fas fa-history"></i> Latest Orders Today - {{ today }}
     </h5>
     <div>
       <span class="badge bg-light text-dark me-2">{{ total_sessions }} Orders</span>
-      <span class="badge" style="background-color: var(--accent)">{{ total_orders_count }} Items Sold</span>
+      <span class="badge" style="background-color: var(--accent);">{{ total_orders_count }} Items</span>
     </div>
   </div>
   <div class="card-body p-0">
@@ -165,252 +143,142 @@
       <table class="table table-hover mb-0">
         <thead>
           <tr>
-            <th width="5%">#</th>
-            <th width="28%">Menu Items</th>
-            <th width="6%">Unique</th>
-            <th width="6%">Qty</th>
-            <th width="10%">Amount</th>
-            <th width="10%">Waiter</th>
-            <th width="10%">Location</th>
-            <th width="8%">Status</th>
-            <th width="8%">By</th>
-            <th width="12%">Actions</th>
+            <th>#</th>
+            <th>Menu Items</th>
+            <th>Uniq</th>
+            <th>Qty</th>
+            <th>Amount</th>
+            <th>Waiter</th>
+            <th>Location</th>
+            <th>Status</th>
+            <th>By</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {% for group in grouped_orders %}
           <tr>
             <td class="text-center">
-              <span class="badge fs-6" style="background-color: var(--primary); min-width: 35px">
-                #{{ group.order_number }}
-              </span>
+              <span class="badge" style="background-color: var(--primary);">#{{ group.order_number }}</span>
             </td>
-
             <td>
-              <div class="d-flex flex-wrap gap-1 align-items-center">
+              <div class="d-flex flex-wrap gap-1">
                 {% for item in group.combined_items %}
-                <span class="badge fs-6 p-2" style="background-color: var(--secondary)">
-                  <i class="fas fa-utensils me-1"></i>
+                <span class="badge" style="background-color: var(--secondary); font-size:11.5px;">
                   {{ item.menu_item.name }}
-                  <span class="badge bg-light text-dark ms-2">
+                  <span class="badge bg-light text-dark ms-1" style="font-size:10px;">
                     {% if item.quantity > 1 %}×{{ item.quantity }}{% endif %}
                   </span>
                 </span>
                 {% endfor %}
               </div>
               {% if group.notes %}
-              <small class="text-muted d-block mt-1">
-                <i class="fas fa-sticky-note"></i> {{ group.notes|truncatechars:50 }}
+              <small class="text-muted d-block mt-1" style="font-size:11px;">
+                <i class="fas fa-sticky-note"></i> {{ group.notes|truncatechars:40 }}
               </small>
               {% endif %}
             </td>
-
-            <td class="text-center">
-              <span class="badge bg-info">{{ group.item_count }}</span>
-            </td>
-
-            <td class="text-center">
-              <strong class="fs-6">{{ group.total_quantity }}</strong>
-            </td>
-
-            <td>
-              <span class="fw-bold fs-6" style="color: var(--secondary)">
-                {{ group.total_amount|floatformat:"0"|intcomma }}
-              </span>
-            </td>
-
-            <td>
-              <span style="color: var(--primary)">
-                <i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}
-              </span>
-            </td>
-
+            <td class="text-center"><span class="badge bg-info">{{ group.item_count }}</span></td>
+            <td class="text-center"><strong>{{ group.total_quantity }}</strong></td>
+            <td><span class="fw-bold" style="color: var(--secondary);">{{ group.total_amount|floatformat:"0"|intcomma }}/=</span></td>
+            <td><span style="color: var(--primary);"><i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}</span></td>
             <td>
               {% if group.location_type == 'table' %}
-              <span class="badge fs-6 p-2" style="background-color: #17a2b8">
-                <i class="fas fa-chair"></i> Table
-                {% if group.location_detail %}#{{ group.location_detail }}{% endif %}
-              </span>
+              <span class="badge" style="background-color: #17a2b8;"><i class="fas fa-chair"></i> Table{% if group.location_detail %}#{{ group.location_detail }}{% endif %}</span>
               {% elif group.location_type == 'takeaway' %}
-              <span class="badge fs-6 p-2" style="background-color: #ffc107; color: #000">
-                <i class="fas fa-shopping-bag"></i> Takeaway
-                {% if group.location_detail %}#{{ group.location_detail }}{% endif %}
-              </span>
+              <span class="badge" style="background-color: #ffc107; color: #000;"><i class="fas fa-shopping-bag"></i> Takeaway{% if group.location_detail %}#{{ group.location_detail }}{% endif %}</span>
               {% else %}
-              <span class="badge fs-6 p-2" style="background-color: #6c757d">
-                <i class="fas fa-map-marker-alt"></i> {{ group.location_detail|default:"Other" }}
-              </span>
+              <span class="badge" style="background-color: #6c757d;"><i class="fas fa-map-marker-alt"></i> {{ group.location_detail|default:"Other" }}</span>
               {% endif %}
             </td>
-                        <td class="text-center">
+            <td class="text-center">
               {% if group.payment_status == 'closed' %}
-              <button class="btn btn-sm toggle-group-status" data-session-id="{{ group.session_id }}" 
-                      style="background-color: #28a745; color: white; border: none; border-radius: 20px; padding: 5px 10px; font-weight: bold;"
-                      title="Click to reopen">CLOSED</button>
+              <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}" 
+                      style="background-color: #28a745; color: white;" title="Click to reopen">CLOSED</button>
               {% elif group.payment_status == 'partial' %}
-              <button class="btn btn-sm toggle-group-status" data-session-id="{{ group.session_id }}"
-                      style="background-color: #ffc107; color: #000; border: none; border-radius: 20px; padding: 5px 10px; font-weight: bold;"
-                      title="Click to close all">MIXED</button>
+              <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+                      style="background-color: #ffc107; color: #000;" title="Click to close all">MIXED</button>
               {% else %}
-              <button class="btn btn-sm toggle-group-status" data-session-id="{{ group.session_id }}"
-                      style="background-color: #dc3545; color: white; border: none; border-radius: 20px; padding: 5px 10px; font-weight: bold;"
-                      title="Click to close">OPEN</button>
+              <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+                      style="background-color: #dc3545; color: white;" title="Click to close">OPEN</button>
               {% endif %}
             </td>
             <td>
-              <small class="text-muted">
-                <i class="fas fa-user-edit"></i> {{ group.created_by.username }}
-              </small>
-              <br/>
-              <small class="text-muted">{{ group.created_at|time:"H:i" }}</small>
+              <small class="text-muted" style="font-size:11px;"><i class="fas fa-user-edit"></i> {{ group.created_by.username }}</small><br/>
+              <small class="text-muted" style="font-size:11px;">{{ group.created_at|time:"H:i" }}</small>
             </td>
-<!-- Actions -->
-<td>
-  <div class="btn-group btn-group-sm">
-
-        <!-- View details for multiple items -->
-    {% if group.item_count > 1 %}
-    <button class="btn btn-info view-group" data-session-id="{{ group.session_id }}" title="View Details">
-      <i class="fas fa-eye"></i>
-    </button>
-    {% endif %}
-
-    <!-- Edit button for single items -->
-    {% if group.item_count == 1 %}
-    <button class="btn btn-warning edit-order" data-order-id="{{ group.first_order_id }}" title="Edit Order">
-      <i class="fas fa-edit"></i>
-    </button>
-    {% else %}
-    <div class="btn-group btn-group-sm">
-      <button class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" title="Edit Items">
-        <i class="fas fa-edit"></i>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        {% for item in group.combined_items %}
-        <li>
-          <a class="dropdown-item edit-order" href="#" data-order-id="{{ item.order_ids.0 }}">
-            <i class="fas fa-edit"></i> Edit {{ item.menu_item.name }}
-          </a>
-        </li>
-        {% endfor %}
-        <li><hr class="dropdown-divider"></li>
-        <li>
-          <a class="dropdown-item add-to-group" href="#" data-session-id="{{ group.session_id }}">
-            <i class="fas fa-plus-circle text-success"></i> Add Items to Order
-          </a>
-        </li>
-      </ul>
-    </div>
-    {% endif %}
-
-    <!-- Add Items button -->
-    <button class="btn btn-success add-to-group" data-session-id="{{ group.session_id }}" title="Add Items to Order">
-      <i class="fas fa-plus"></i>
-    </button>
-
-    <!-- Delete button -->
-    {% if group.is_group %}
-    <button class="btn btn-danger delete-group" data-session-id="{{ group.session_id }}" title="Delete Entire Order">
-      <i class="fas fa-trash"></i>
-    </button>
-    {% else %}
-    <button class="btn btn-danger delete-order" data-order-id="{{ group.first_order_id }}" title="Delete Order">
-      <i class="fas fa-trash"></i>
-    </button>
-    {% endif %}
-  </div>
-</td>
+            <td>
+              <div class="btn-group btn-group-sm">
+                {% if group.item_count > 1 %}
+                <button class="btn btn-info btn-sm view-group" data-session-id="{{ group.session_id }}" title="View"><i class="fas fa-eye"></i></button>
+                {% endif %}
+                {% if group.item_count == 1 %}
+                <button class="btn btn-warning btn-sm edit-order" data-order-id="{{ group.first_order_id }}" title="Edit"><i class="fas fa-edit"></i></button>
+                {% else %}
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-warning btn-sm dropdown-toggle" data-bs-toggle="dropdown" title="Edit"><i class="fas fa-edit"></i></button>
+                  <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;">
+                    {% for item in group.combined_items %}
+                    <li><a class="dropdown-item edit-order" href="#" data-order-id="{{ item.order_ids.0 }}" style="font-size:12px;"><i class="fas fa-edit"></i> {{ item.menu_item.name }}</a></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item add-to-group" href="#" data-session-id="{{ group.session_id }}" style="font-size:12px;"><i class="fas fa-plus-circle text-success"></i> Add Items</a></li>
+                  </ul>
+                </div>
+                {% endif %}
+                <button class="btn btn-success btn-sm add-to-group" data-session-id="{{ group.session_id }}" title="Add"><i class="fas fa-plus"></i></button>
+                {% if group.is_group %}
+                <button class="btn btn-danger btn-sm delete-group" data-session-id="{{ group.session_id }}" title="Delete"><i class="fas fa-trash"></i></button>
+                {% else %}
+                <button class="btn btn-danger btn-sm delete-order" data-order-id="{{ group.first_order_id }}" title="Delete"><i class="fas fa-trash"></i></button>
+                {% endif %}
+              </div>
+            </td>
           </tr>
 
           {% if group.item_count > 1 %}
           <tr class="group-details" id="details-{{ group.session_id }}" style="display: none;">
-            <td colspan="10" class="bg-light">
-              <div class="p-2">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <strong>
-                    <i class="fas fa-list"></i> Order #{{ group.order_number }} Breakdown:
-                  </strong>
-                  <div>
-                    <span class="me-3">
-                      <i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}
-                    </span>
-                    <span>
-                      <i class="fas fa-map-marker-alt"></i>
-                      {% if group.location_type == 'table' %}
-                        Table{% if group.location_detail %}#{{ group.location_detail }}{% endif %}
-                      {% elif group.location_type == 'takeaway' %}
-                        Takeaway{% if group.location_detail %}#{{ group.location_detail }}{% endif %}
-                      {% else %}
-                        {{ group.location_detail|default:"Other" }}
-                      {% endif %}
-                    </span>
-                  </div>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm table-bordered">
-                    <thead class="table-warning">
-                      <tr>
-                        <th>#</th>
-                        <th>Menu Item</th>
-                        <th>Category</th>
-                        <th>Qty</th>
-                        <th>Unit Price</th>
-                        <th>Subtotal</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {% for item in group.combined_items %}
-                      <tr>
-                        <td>{{ forloop.counter }}</td>
-                        <td><strong>{{ item.menu_item.name }}</strong></td>
-                        <td>
-                          <span class="badge" style="background-color: var(--accent)">
-                            {{ item.category.name }}
-                          </span>
-                        </td>
-                        <td class="text-center">
-                          <span class="badge bg-primary fs-6">{{ item.quantity }}</span>
-                        </td>
-                        <td class="text-end">{{ item.unit_price|floatformat:"0"|intcomma }}</td>
-                        <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:"0"|intcomma }}</td>
-                        <td>
-                          <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-warning edit-order" data-order-id="{{ item.order_ids.0 }}" title="Edit this item">
-                              <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-outline-danger delete-order" data-order-id="{{ item.order_ids.0 }}" title="Delete this item">
-                              <i class="fas fa-trash"></i>
-                            </button>
-
-                          </div>
-                        </td>
-                        
-                      </tr>
-                      {% endfor %}
-                    </tbody>
-                    <tfoot class="table-success fw-bold">
-                      <tr>
-                        <td colspan="3">Total</td>
-                        <td class="text-center">{{ group.total_quantity }}</td>
-                        <td></td>
-                        <td class="text-end">{{ group.total_amount|floatformat:"0"|intcomma }}</td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
+            <td colspan="10" class="bg-light" style="padding: 8px;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong style="font-size:12.5px;"><i class="fas fa-list"></i> Order #{{ group.order_number }} Breakdown:</strong>
+                <div style="font-size:12px;">
+                  <span class="me-3"><i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}</span>
+                  <span><i class="fas fa-map-marker-alt"></i> {{ group.location_display }}</span>
                 </div>
               </div>
+              <table class="table table-sm table-bordered" style="font-size:12px;">
+                <thead class="table-warning">
+                  <tr><th>#</th><th>Menu Item</th><th>Category</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {% for item in group.combined_items %}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ item.menu_item.name }}</strong></td>
+                    <td><span class="badge" style="background-color: var(--accent);">{{ item.category.name }}</span></td>
+                    <td class="text-center"><span class="badge bg-primary">{{ item.quantity }}</span></td>
+                    <td class="text-end">{{ item.unit_price|floatformat:"0"|intcomma }}/=</td>
+                    <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:"0"|intcomma }}/=</td>
+                    <td>
+                      <button class="btn btn-outline-warning btn-sm edit-order" data-order-id="{{ item.order_ids.0 }}" title="Edit"><i class="fas fa-edit"></i></button>
+                      <button class="btn btn-outline-danger btn-sm delete-order" data-order-id="{{ item.order_ids.0 }}" title="Delete"><i class="fas fa-trash"></i></button>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+                <tfoot class="table-success fw-bold">
+                  <tr><td colspan="3">Total</td><td class="text-center">{{ group.total_quantity }}</td><td></td><td class="text-end">{{ group.total_amount|floatformat:"0"|intcomma }}/=</td><td></td></tr>
+                </tfoot>
+              </table>
             </td>
           </tr>
           {% endif %}
           
           {% empty %}
           <tr>
-            <td colspan="10" class="text-center py-5 text-muted">
-              <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-              <p class="fs-5">No orders recorded today yet.</p>
-              <p>Start by selecting menu items above and submitting your first order!</p>
+            <td colspan="10" class="text-center py-4 text-muted">
+              <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+              <p style="font-size:13px;">No orders recorded today yet.</p>
             </td>
           </tr>
           {% endfor %}
@@ -421,185 +289,91 @@
 </div>
 
 <!-- Today's Summary Footer -->
-<div class="card shadow mt-4 mb-4"
-     style="background: linear-gradient(135deg, var(--primary), #8b1a0a); color: white; border-radius: 12px;">
-  
-  <div class="card-body">
-    
-    <div class="row text-center g-3 align-items-stretch">
-      
-      <!-- Total Orders -->
+<div class="card shadow mt-3 mb-4" style="background: linear-gradient(135deg, var(--primary), #8b1a0a); color: white; border-radius: 8px;">
+  <div class="card-body" style="padding: 12px 15px;">
+    <div class="row text-center g-2">
       <div class="col-md-2">
-        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.05);">
-          <i class="fas fa-receipt fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-          <h6 class="text-uppercase mb-1">Total Orders</h6>
-          <h3 class="fw-bold mb-0" style="color: var(--accent)">
-            {{ total_sessions }}
-          </h3>
+        <div class="stat-card" style="background: rgba(255,255,255,0.05);">
+          <i class="fas fa-receipt" style="color: var(--accent);"></i>
+          <h6>Total Orders</h6>
+          <h3 style="color: var(--accent); font-size:1.4rem;">{{ total_sessions }}</h3>
         </div>
       </div>
-
-      <!-- Items Sold -->
       <div class="col-md-2">
-        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.05);">
-          <i class="fas fa-utensils fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-          <h6 class="text-uppercase mb-1">Items Sold</h6>
-          <h3 class="fw-bold mb-0" style="color: var(--accent)">
-            {{ total_orders_count }}
-          </h3>
+        <div class="stat-card" style="background: rgba(255,255,255,0.05);">
+          <i class="fas fa-utensils" style="color: var(--accent);"></i>
+          <h6>Items Sold</h6>
+          <h3 style="color: var(--accent); font-size:1.4rem;">{{ total_orders_count }}</h3>
         </div>
       </div>
-
-      <!-- Closed -->
       <div class="col-md-2">
-        <div class="h-100 p-3 rounded" style="background: rgba(40,167,69,0.15);">
-          <i class="fas fa-lock fa-2x mb-2 d-block" style="color: #28a745;"></i>
-          <h6 class="text-uppercase mb-1">Closed</h6>
-          <h3 class="fw-bold mb-0" style="color: #28a745;">
-            {{ closed_count|default:"0" }}
-          </h3>
+        <div class="stat-card" style="background: rgba(40,167,69,0.15);">
+          <i class="fas fa-lock" style="color: #28a745;"></i>
+          <h6>Closed</h6>
+          <h3 style="color: #28a745; font-size:1.4rem;">{{ closed_count|default:"0" }}</h3>
         </div>
       </div>
-
-      <!-- Open -->
       <div class="col-md-2">
-        <div class="h-100 p-3 rounded" style="background: rgba(220,53,69,0.15);">
-          <i class="fas fa-lock-open fa-2x mb-2 d-block" style="color: #dc3545;"></i>
-          <h6 class="text-uppercase mb-1">Open</h6>
-          <h3 class="fw-bold mb-0" style="color: #dc3545;">
-            {{ open_count|default:"0" }}
-          </h3>
+        <div class="stat-card" style="background: rgba(220,53,69,0.15);">
+          <i class="fas fa-lock-open" style="color: #dc3545;"></i>
+          <h6>Open</h6>
+          <h3 style="color: #dc3545; font-size:1.4rem;">{{ open_count|default:"0" }}</h3>
         </div>
       </div>
-
-      <!-- Active Waiters -->
       <div class="col-md-2">
-        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.05);">
-          <i class="fas fa-users fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-          <h6 class="text-uppercase mb-1">Active Waiters</h6>
-          <h3 class="fw-bold mb-0" style="color: var(--accent)">
-            {{ waiters|length }}
-          </h3>
+        <div class="stat-card" style="background: rgba(255,255,255,0.05);">
+          <i class="fas fa-users" style="color: var(--accent);"></i>
+          <h6>Waiters</h6>
+          <h3 style="color: var(--accent); font-size:1.4rem;">{{ waiters|length }}</h3>
         </div>
       </div>
-
-      <!-- Today's Collection -->
       <div class="col-md-2">
-        <div class="h-100 p-3 rounded" style="background: rgba(255,255,255,0.08);">
-          <i class="fas fa-money-bill-wave fa-2x mb-2 d-block" style="color: var(--accent)"></i>
-          <h6 class="text-uppercase mb-1">Today</h6>
-          <h2 class="fw-bold mb-0 text-white">
-            {{ total_collection|floatformat:"0"|intcomma }}
-          </h2>
+        <div class="stat-card" style="background: rgba(255,255,255,0.08);">
+          <i class="fas fa-money-bill-wave" style="color: var(--accent);"></i>
+          <h6>Collection</h6>
+          <h3 class="text-white" style="font-size:1.3rem;">{{ total_collection|floatformat:"0"|intcomma }}</h3>
         </div>
       </div>
-
     </div>
-
-    <hr style="border-color: rgba(255,255,255,0.2);"/>
-
-    <div class="text-center">
-      <small>
-        <i class="far fa-calendar-alt"></i>
-        {{ today|date:"l, F j, Y" }} |
-        <i class="far fa-clock"></i>
-        Current Time: {% now "H:i" %}
-      </small>
+    <hr style="border-color: rgba(255,255,255,0.2); margin: 8px 0;"/>
+    <div class="text-center" style="font-size:11px;">
+      <i class="far fa-calendar-alt"></i> {{ today|date:"l, F j, Y" }} | <i class="far fa-clock"></i> {% now "H:i" %}
     </div>
-
   </div>
 </div>
 
+<!-- ============ MODALS ============ -->
 <!-- Confirmation Modal -->
 <div class="modal fade" id="confirmModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header" style="background-color: var(--primary); color: white">
-        <h5 class="modal-title">
-          <i class="fas fa-check-circle"></i> Confirm Order Submission
-        </h5>
+      <div class="modal-header" style="background-color: var(--primary); color: white;">
+        <h5 class="modal-title"><i class="fas fa-check-circle"></i> Confirm Order Submission</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <div class="table-responsive">
-          <table class="table table-bordered table-hover" id="orderSummaryTable">
-            <thead style="background-color: var(--secondary); color: white">
-              <tr>
-                <th width="5%">#</th>
-                <th width="30%">Menu Item</th>
-                <th width="10%">Qty</th>
-                <th width="15%">Unit Price</th>
-                <th width="15%">Subtotal</th>
-                <th width="25%">Category</th>
-              </tr>
+          <table class="table table-bordered table-hover" style="font-size:12.5px;">
+            <thead style="background-color: var(--secondary); color: white;">
+              <tr><th>#</th><th>Menu Item</th><th>Qty</th><th>Unit Price</th><th>Subtotal</th><th>Category</th></tr>
             </thead>
             <tbody id="orderSummaryBody"></tbody>
-            <tfoot style="background-color: #f8f9fa; font-weight: bold">
-              <tr>
-                <td colspan="4" class="text-end">
-                  <span style="font-size: 1.1rem">Total Items:</span>
-                </td>
-                <td colspan="2">
-                  <span id="totalItems" style="color: var(--primary); font-size: 1.2rem">0</span> items
-                </td>
-              </tr>
-              <tr style="background-color: var(--accent); color: white">
-                <td colspan="4" class="text-end">
-                  <span style="font-size: 1.1rem">Grand Total:</span>
-                </td>
-                <td colspan="2">
-                  <span id="grandTotal" style="font-size: 1.3rem; font-weight: bold">0 /=</span>
-                </td>
-              </tr>
+            <tfoot style="background-color: #f8f9fa; font-weight: bold;">
+              <tr><td colspan="4" class="text-end">Total Items:</td><td colspan="2"><span id="totalItems" style="color: var(--primary);">0</span> items</td></tr>
+              <tr style="background-color: var(--accent); color: white;"><td colspan="4" class="text-end">Grand Total:</td><td colspan="2"><span id="grandTotal" style="font-weight: bold;">0 /=</span></td></tr>
             </tfoot>
           </table>
         </div>
-
-        <div class="row mt-3">
-          <div class="col-md-4">
-            <div class="card border-success">
-              <div class="card-body py-2">
-                <small class="text-muted">
-                  <i class="fas fa-user-tie"></i> <strong>Waiter:</strong>
-                </small>
-                <span id="summaryWaiter" class="ms-2 fw-bold" style="color: var(--primary)">Not selected</span>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card border-info">
-              <div class="card-body py-2">
-                <small class="text-muted">
-                  <i class="fas fa-map-marker-alt"></i> <strong>Location:</strong>
-                </small>
-                <span id="summaryLocation" class="ms-2 fw-bold" style="color: var(--primary)">Not set</span>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="card border-warning">
-              <div class="card-body py-2">
-                <small class="text-muted">
-                  <i class="fas fa-sticky-note"></i> <strong>Notes:</strong>
-                </small>
-                <span id="summaryNotes" class="ms-2 text-muted fst-italic">No notes</span>
-              </div>
-            </div>
-          </div>
+        <div class="row mt-2 g-2">
+          <div class="col-md-4"><div class="card border-success"><div class="card-body py-1 px-2"><small><i class="fas fa-user-tie"></i> <strong>Waiter:</strong></small><span id="summaryWaiter" class="ms-1 fw-bold" style="color:var(--primary);">-</span></div></div></div>
+          <div class="col-md-4"><div class="card border-info"><div class="card-body py-1 px-2"><small><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong></small><span id="summaryLocation" class="ms-1 fw-bold" style="color:var(--primary);">-</span></div></div></div>
+          <div class="col-md-4"><div class="card border-warning"><div class="card-body py-1 px-2"><small><i class="fas fa-sticky-note"></i> <strong>Notes:</strong></small><span id="summaryNotes" class="ms-1 text-muted fst-italic">-</span></div></div></div>
         </div>
-
-        <div id="noItemsWarning" class="alert alert-warning mt-3" style="display: none;">
-          <i class="fas fa-exclamation-triangle"></i>
-          <strong>No items selected!</strong> Please select at least one menu item.
-        </div>
+        <div id="noItemsWarning" class="alert alert-warning mt-2" style="display:none;"><i class="fas fa-exclamation-triangle"></i> <strong>No items selected!</strong></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times"></i> No, Cancel
-        </button>
-        <button type="button" class="btn btn-primary" id="confirmSubmit">
-          <i class="fas fa-check"></i> Yes, Submit
-        </button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmSubmit">Yes, Submit</button>
       </div>
     </div>
   </div>
@@ -607,492 +381,178 @@
 
 <!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">Delete Order</h5>
-      </div>
-      <div class="modal-body">
-        <p>Are you sure you want to delete this order?</p>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <form id="deleteOrderForm" method="post">
-          {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Delete</button>
-        </form>
-      </div>
+  <div class="modal-dialog modal-sm"><div class="modal-content">
+    <div class="modal-header bg-danger text-white"><h5 class="modal-title">Delete Order</h5></div>
+    <div class="modal-body"><p>Are you sure?</p></div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+      <form id="deleteOrderForm" method="post">{% csrf_token %}<button type="submit" class="btn btn-danger btn-sm">Delete</button></form>
     </div>
-  </div>
+  </div></div>
 </div>
 
 <!-- Edit Modal -->
 <div class="modal fade" id="editModal" tabindex="-1">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header" style="background-color: var(--accent); color: white">
-        <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Order</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <form id="editOrderForm" method="post">
-          {% csrf_token %}
-          <input type="hidden" name="order_id" id="editOrderId"/>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold">Menu Item</label>
-              <select class="form-select" name="menu_item" id="editMenuItem">
-                {% for item in menu_items %}
-                <option value="{{ item.id }}">{{ item.name }} - {{ item.price }} /=</option>
-                {% endfor %}
-              </select>
+  <div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header" style="background-color: var(--accent); color: white;"><h5 class="modal-title"><i class="fas fa-edit"></i> Edit Order</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <form id="editOrderForm" method="post">{% csrf_token %}<input type="hidden" name="order_id" id="editOrderId"/>
+        <div class="row g-2">
+          <div class="col-md-6"><label class="form-label">Menu Item</label><select class="form-select form-select-sm" name="menu_item" id="editMenuItem">{% for item in menu_items %}<option value="{{ item.id }}">{{ item.name }} - {{ item.price }}/=</option>{% endfor %}</select></div>
+          <div class="col-md-3"><label class="form-label">Quantity</label><input type="number" class="form-control form-control-sm" name="quantity" id="editQuantity" min="1"/></div>
+          <div class="col-md-3"><label class="form-label">Waiter</label><select class="form-select form-select-sm" name="waiter" id="editWaiter"><option value="">-- Select --</option>{% for waiter in waiters %}<option value="{{ waiter.id }}">{{ waiter.display_name }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="row g-2 mt-1">
+          <div class="col-md-6">
+            <label class="form-label"><i class="fas fa-map-marker-alt"></i> Location</label>
+            <div class="mb-1">
+              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_table" value="table"/><label class="form-check-label" for="edit_location_table">Table</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_takeaway" value="takeaway"/><label class="form-check-label" for="edit_location_takeaway">Takeaway</label></div>
+              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_other" value="other"/><label class="form-check-label" for="edit_location_other">Other</label></div>
             </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label fw-bold">Quantity</label>
-              <input type="number" class="form-control" name="quantity" id="editQuantity" min="1"/>
-            </div>
-            <div class="col-md-3 mb-3">
-              <label class="form-label fw-bold">Waiter</label>
-              <select class="form-select" name="waiter" id="editWaiter">
-                <option value="">-- Select --</option>
-                {% for waiter in waiters %}
-                <option value="{{ waiter.id }}">{{ waiter.display_name }}</option>
-                {% endfor %}
-              </select>
-            </div>
+            <input type="text" class="form-control form-control-sm" name="location_detail" id="editLocationDetail" placeholder="Table number or location name"/>
           </div>
-
-          <div class="row">
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold">
-                <i class="fas fa-map-marker-alt"></i> Location Type
-              </label>
-              <div class="mb-2">
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input edit-location-radio" type="radio" 
-                         name="location_type" id="edit_location_table" value="table"/>
-                  <label class="form-check-label" for="edit_location_table">
-                    <i class="fas fa-chair"></i> Table
-                  </label>
-                </div>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input edit-location-radio" type="radio" 
-                         name="location_type" id="edit_location_takeaway" value="takeaway"/>
-                  <label class="form-check-label" for="edit_location_takeaway">
-                    <i class="fas fa-shopping-bag"></i> Takeaway
-                  </label>
-                </div>
-                <div class="form-check form-check-inline">
-                  <input class="form-check-input edit-location-radio" type="radio" 
-                         name="location_type" id="edit_location_other" value="other"/>
-                  <label class="form-check-label" for="edit_location_other">
-                    <i class="fas fa-ellipsis-h"></i> Other
-                  </label>
-                </div>
-              </div>
-              <input type="text" class="form-control" name="location_detail" 
-                     id="editLocationDetail" placeholder="Table number or location name"/>
-            </div>
-            <div class="col-md-6 mb-3">
-              <label class="form-label fw-bold">Notes</label>
-              <textarea class="form-control" name="notes" id="editNotes" rows="3"></textarea>
-            </div>
-          </div>
-
-          <div class="text-end">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-warning">
-              <i class="fas fa-save"></i> Update Order
-            </button>
-          </div>
-        </form>
-      </div>
+          <div class="col-md-6"><label class="form-label">Notes</label><textarea class="form-control form-control-sm" name="notes" id="editNotes" rows="2"></textarea></div>
+        </div>
+        <div class="text-end mt-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-save"></i> Update</button></div>
+      </form>
     </div>
-  </div>
+  </div></div>
 </div>
 
 <!-- Add to Order Modal -->
 <div class="modal fade" id="addToOrderModal" tabindex="-1">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header" style="background-color: var(--secondary); color: white;">
-        <h5 class="modal-title">
-          <i class="fas fa-plus-circle"></i> Add Items to Existing Order
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <!-- Order Info Summary -->
-        <div class="alert alert-info mb-3">
-          <div class="row">
-            <div class="col-md-4">
-              <strong><i class="fas fa-user-tie"></i> Waiter:</strong> 
-              <span id="addOrderWaiter">-</span>
-            </div>
-            <div class="col-md-4">
-              <strong><i class="fas fa-map-marker-alt"></i> Location:</strong> 
-              <span id="addOrderLocation">-</span>
-            </div>
-            <div class="col-md-4">
-              <strong><i class="fas fa-money-bill"></i> Current Total:</strong> 
-              <span id="addOrderCurrentTotal">0 /=</span>
-            </div>
-          </div>
-          <div class="mt-2">
-            <strong><i class="fas fa-list"></i> Existing Items:</strong>
-            <div id="addOrderExistingItems" class="mt-1"></div>
-          </div>
-          <div class="mt-2" id="addOrderNotesContainer" style="display:none;">
-            <strong><i class="fas fa-sticky-note"></i> Notes:</strong>
-            <span id="addOrderNotes" class="text-muted fst-italic"></span>
-          </div>
+  <div class="modal-dialog modal-xl"><div class="modal-content">
+    <div class="modal-header" style="background-color: var(--secondary); color: white;"><h5 class="modal-title"><i class="fas fa-plus-circle"></i> Add Items to Order</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <div class="alert alert-info mb-2" style="padding:8px 12px; font-size:12px;">
+        <div class="row">
+          <div class="col-md-4"><strong><i class="fas fa-user-tie"></i> Waiter:</strong> <span id="addOrderWaiter">-</span></div>
+          <div class="col-md-4"><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> <span id="addOrderLocation">-</span></div>
+          <div class="col-md-4"><strong><i class="fas fa-money-bill"></i> Current Total:</strong> <span id="addOrderCurrentTotal">0 /=</span></div>
         </div>
-
-        <!-- Add Items Form -->
-        <form id="addToOrderForm" method="post">
-          {% csrf_token %}
-          
-          <fieldset class="mb-4">
-            <legend style="background-color: var(--accent); color: white; padding: 5px 15px; border-radius: 5px;">
-              Select Additional Items
-            </legend>
-            <div class="row">
-              {% for category in categories %}
-              <div class="col-md-6 col-lg-3 mb-3">
-                <div class="card h-100">
-                  <div class="card-header" style="background-color: var(--primary); color: white">
-                    {{ category.name }}
-                  </div>
-                  <div class="card-body">
-                    {% for item in menu_items %}
-                      {% if item.category_id == category.id %}
-                      <div class="d-flex align-items-center mb-2">
-                        <input type="checkbox" name="item_{{ item.id }}" id="add_item_{{ item.id }}"
-                               class="form-check-input me-2 add-menu-checkbox" data-item-id="{{ item.id }}"/>
-                        <label for="add_item_{{ item.id }}" class="flex-grow-1">
-                          {{ item.name }}
-                        </label>
-                        <span class="badge" style="background-color: var(--primary)">
-                          {{ item.price }} /=
-                        </span>
-                        <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}"
-                               class="form-control form-control-sm ms-2" style="width: 60px"
-                               value="1" min="1" disabled/>
-                      </div>
-                      {% endif %}
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-              {% endfor %}
-            </div>
-          </fieldset>
-
-          <div class="text-end">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-success btn-lg">
-              <i class="fas fa-plus-circle"></i> Add to Order
-            </button>
-          </div>
-        </form>
+        <div class="mt-1"><strong><i class="fas fa-list"></i> Existing Items:</strong><div id="addOrderExistingItems" class="mt-1"></div></div>
+        <div class="mt-1" id="addOrderNotesContainer" style="display:none;"><strong><i class="fas fa-sticky-note"></i> Notes:</strong> <span id="addOrderNotes" class="text-muted fst-italic"></span></div>
       </div>
+      <form id="addToOrderForm" method="post">{% csrf_token %}
+        <fieldset class="mb-2">
+          <legend><i class="fas fa-utensils section-icon"></i> Select Additional Items</legend>
+          <div class="row g-2">
+            {% for category in categories %}
+            <div class="col-md-6 col-lg-3"><div class="card h-100"><div class="card-header" style="background-color: var(--primary); color: white; font-size:11.5px;">{{ category.name }}</div><div class="card-body">
+              {% for item in menu_items %}{% if item.category_id == category.id %}
+              <div class="menu-item-row">
+                <div class="form-check">
+                  <input type="checkbox" name="item_{{ item.id }}" id="add_item_{{ item.id }}" class="form-check-input add-menu-checkbox" data-item-id="{{ item.id }}"/>
+                  <label for="add_item_{{ item.id }}" class="form-check-label" title="{{ item.name }}">{{ item.name }}</label>
+                </div>
+                <span class="menu-item-price">{{ item.price }}/=</span>
+                <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}" class="form-control form-control-sm quantity-input" value="1" min="1" disabled/>
+              </div>
+              {% endif %}{% endfor %}
+            </div></div></div>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <div class="text-end"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-success btn-sm"><i class="fas fa-plus-circle"></i> Add to Order</button></div>
+      </form>
     </div>
-  </div>
+  </div></div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 $(document).ready(function () {
-      // Restore scroll position instantly (no visible scroll)
     var savedPos = localStorage.getItem('scrollPos');
     if (savedPos) {
         localStorage.removeItem('scrollPos');
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual';
-        }
+        if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
         window.scrollTo(0, parseInt(savedPos));
     }
-
-    // Scroll to orders table only for new submissions
     if (localStorage.getItem('scrollToOrders') === 'true') {
         localStorage.removeItem('scrollToOrders');
         setTimeout(function() {
             $('html, body').scrollTop($('.card-header:contains("Latest Orders")').offset().top - 80);
         }, 50);
     }
-    // Enable/disable quantity on checkbox toggle
     $(".menu-checkbox").change(function () {
         var itemId = $(this).data("item-id");
         $("#quantity_" + itemId).prop("disabled", !$(this).is(":checked"));
     });
-
-    // Location radio button handling
     $('.location-radio').change(function() {
-        var locationType = $(this).val();
-        var detailInput = $('#location_detail');
-        var detailLabel = $('#locationDetailLabel');
-        
-        if (locationType === 'other') {
-            detailLabel.text('Specify Location');
-            detailInput.attr('placeholder', 'Enter location name');
-        } else if (locationType === 'table') {
-            detailLabel.text('Table Number (optional)');
-            detailInput.attr('placeholder', 'Enter table number (optional)');
-        } else if (locationType === 'takeaway') {
-            detailLabel.text('Takeaway Number (optional)');
-            detailInput.attr('placeholder', 'Enter takeaway number (optional)');
-        }
+        var lt = $(this).val();
+        $('#locationDetailLabel').text(lt === 'other' ? 'Specify Location' : lt === 'table' ? 'Table Number' : 'Takeaway Number');
+        $('#location_detail').attr('placeholder', lt === 'other' ? 'Enter location name' : 'Enter ' + lt + ' number (optional)');
     });
-
-    // Edit modal location handling
     $(document).on('change', '.edit-location-radio', function() {
-        var locationType = $(this).val();
-        var detailInput = $('#editLocationDetail');
-        
-        if (locationType === 'table') {
-            detailInput.attr('placeholder', 'Table number (optional)');
-        } else if (locationType === 'takeaway') {
-            detailInput.attr('placeholder', 'Takeaway number (optional)');
-        } else {
-            detailInput.attr('placeholder', 'Enter location name');
-        }
+        var lt = $(this).val();
+        $('#editLocationDetail').attr('placeholder', lt === 'other' ? 'Enter location name' : lt + ' number (optional)');
     });
-
-    // Build confirmation modal
     $("#confirmModal").on("show.bs.modal", function () {
-        var summaryBody = $("#orderSummaryBody");
-        summaryBody.empty();
-
-        var itemCount = 0;
-        var grandTotal = 0;
-        var hasItems = false;
-
+        var summaryBody = $("#orderSummaryBody"); summaryBody.empty();
+        var itemCount = 0, grandTotal = 0, hasItems = false;
         $(".menu-checkbox:checked").each(function () {
             var itemId = $(this).data("item-id");
             var itemName = $('label[for="item_' + itemId + '"]').text().trim();
             var quantity = parseInt($("#quantity_" + itemId).val()) || 1;
-            var priceText = $(this).closest(".d-flex").find(".badge").text().trim();
-            var unitPrice = parseFloat(priceText.replace("/=", "").trim()) || 0;
+            var priceText = $(this).closest(".menu-item-row").find(".menu-item-price").text().replace("/=", "").trim();
+            var unitPrice = parseFloat(priceText.replace(/,/g, "")) || 0;
             var subtotal = unitPrice * quantity;
-
-            var categoryCard = $(this).closest(".card");
-            var categoryName = categoryCard.find(".card-header").text().trim();
-
-            itemCount += quantity;
-            grandTotal += subtotal;
-            hasItems = true;
-
-            var row = `
-                <tr>
-                    <td class="text-center">${itemCount}</td>
-                    <td><strong>${itemName}</strong></td>
-                    <td class="text-center"><span class="badge bg-primary">${quantity}</span></td>
-                    <td class="text-end">${unitPrice.toLocaleString()} /=</td>
-                    <td class="text-end fw-bold" style="color: var(--secondary);">${subtotal.toLocaleString()} /=</td>
-                    <td><span class="badge" style="background-color: var(--accent);">${categoryName}</span></td>
-                </tr>
-            `;
-
-            summaryBody.append(row);
+            var categoryName = $(this).closest(".card").find(".card-header").text().trim();
+            itemCount += quantity; grandTotal += subtotal; hasItems = true;
+            summaryBody.append('<tr><td class="text-center">' + itemCount + '</td><td><strong>' + itemName + '</strong></td><td class="text-center"><span class="badge bg-primary">' + quantity + '</span></td><td class="text-end">' + unitPrice.toLocaleString() + ' /=</td><td class="text-end fw-bold" style="color:var(--secondary);">' + subtotal.toLocaleString() + ' /=</td><td><span class="badge" style="background-color:var(--accent);">' + categoryName + '</span></td></tr>');
         });
-
-        $("#totalItems").text(itemCount);
-        $("#grandTotal").text(grandTotal.toLocaleString() + " /=");
-
-            var waiterName = $('input[name="waiter"]:checked').closest('.form-check').find('.form-check-label').text().trim();
+        $("#totalItems").text(itemCount); $("#grandTotal").text(grandTotal.toLocaleString() + " /=");
+        var waiterName = $('input[name="waiter"]:checked').closest('.form-check').find('.form-check-label').text().trim();
         var locationType = $('input[name="location_type"]:checked').val();
         var locationDetail = $('#location_detail').val();
         var notes = $('textarea[name="notes"]').val() || "No notes";
-
-        var locationDisplay = '';
-        if (locationType === 'table') {
-            locationDisplay = 'Table';
-            if (locationDetail) locationDisplay += ' #' + locationDetail;
-        } else if (locationType === 'takeaway') {
-            locationDisplay = 'Takeaway';
-            if (locationDetail) locationDisplay += ' #' + locationDetail;
-        } else {
-            locationDisplay = locationDetail || 'Other';
-        }
-
-        $("#summaryWaiter").text(waiterName || "Not selected");
-        $("#summaryLocation").text(locationDisplay);
-        $("#summaryNotes").text(notes);
-
-        if (!hasItems) {
-            $("#noItemsWarning").show();
-            $("#confirmSubmit").prop("disabled", true);
-        } else {
-            $("#noItemsWarning").hide();
-            $("#confirmSubmit").prop("disabled", false);
-        }
+        var locationDisplay = locationType === 'table' ? 'Table' + (locationDetail ? ' #' + locationDetail : '') : locationType === 'takeaway' ? 'Takeaway' + (locationDetail ? ' #' + locationDetail : '') : (locationDetail || 'Other');
+        $("#summaryWaiter").text(waiterName || "Not selected"); $("#summaryLocation").text(locationDisplay); $("#summaryNotes").text(notes);
+        if (!hasItems) { $("#noItemsWarning").show(); $("#confirmSubmit").prop("disabled", true); }
+        else { $("#noItemsWarning").hide(); $("#confirmSubmit").prop("disabled", false); }
     });
-
-        // Submit form - scroll to orders table after submission
-    $("#confirmSubmit").click(function () {
-        localStorage.setItem('scrollToOrders', 'true');
-        $("#orderForm").submit();
+    $("#confirmSubmit").click(function () { localStorage.setItem('scrollToOrders', 'true'); $("#orderForm").submit(); });
+    $(document).on("click", ".view-group", function () { $("#details-" + $(this).data("session-id")).toggle(); });
+    $(document).on("click", ".delete-group", function () {
+        if (confirm("Delete this entire order?")) { localStorage.setItem('scrollPos', $(window).scrollTop()); $("body").append($('<form method="post" action="/delete-group/' + $(this).data("session-id") + '/">{% csrf_token %}</form>').submit()); }
     });
-
-    // Toggle group details
-    $(".view-group").click(function () {
-        var sessionId = $(this).data("session-id");
-        var detailsRow = $("#details-" + sessionId);
-        detailsRow.toggle();
+    $(document).on("click", ".delete-order", function () {
+        if (confirm("Delete this order?")) { localStorage.setItem('scrollPos', $(window).scrollTop()); $("body").append($('<form method="post" action="/delete-order/' + $(this).data("order-id") + '/">{% csrf_token %}</form>').submit()); }
     });
-
-        // Delete group
-    $(".delete-group").click(function () {
-        var sessionId = $(this).data("session-id");
-        if (confirm("Delete this entire order? This cannot be undone!")) {
-            localStorage.setItem('scrollPos', $(window).scrollTop());
-            var form = $('<form method="post" action="/delete-group/' + sessionId + '/"></form>');
-            form.append('{% csrf_token %}');
-            $("body").append(form);
-            form.submit();
-        }
-    });
-
-    // Delete single order
-    $(".delete-order").click(function () {
-        var orderId = $(this).data("order-id");
-        if (confirm("Delete this order?")) {
-            localStorage.setItem('scrollPos', $(window).scrollTop());
-            var form = $('<form method="post" action="/delete-order/' + orderId + '/"></form>');
-            form.append('{% csrf_token %}');
-            $("body").append(form);
-            form.submit();
-        }
-    });
-
-    // Edit order
-    $(".edit-order").click(function (e) {
-        e.preventDefault();
-        var orderId = $(this).data("order-id");
-        
+    $(document).on("click", ".edit-order", function (e) {
+        e.preventDefault(); var orderId = $(this).data("order-id");
         $.get("/edit-order/" + orderId + "/", function (data) {
-            $("#editOrderId").val(data.id);
-            $("#editMenuItem").val(data.menu_item_id);
-            $("#editQuantity").val(data.quantity);
-            $("#editWaiter").val(data.waiter_id);
-            $("#editNotes").val(data.notes);
-            
-            // Set location radio
+            $("#editOrderId").val(data.id); $("#editMenuItem").val(data.menu_item_id);
+            $("#editQuantity").val(data.quantity); $("#editWaiter").val(data.waiter_id); $("#editNotes").val(data.notes);
             $('input[name="location_type"][value="' + data.location_type + '"]').prop('checked', true);
             $('#editLocationDetail').val(data.location_detail);
-            
-            // Update placeholder based on location type
-            if (data.location_type === 'table') {
-                $('#editLocationDetail').attr('placeholder', 'Table number (optional)');
-            } else if (data.location_type === 'takeaway') {
-                $('#editLocationDetail').attr('placeholder', 'Takeaway number (optional)');
-            } else {
-                $('#editLocationDetail').attr('placeholder', 'Enter location name');
-            }
-            
-            $("#editOrderForm").attr("action", "/update-order/" + orderId + "/");
-            $("#editModal").modal("show");
+            $("#editOrderForm").attr("action", "/update-order/" + orderId + "/"); $("#editModal").modal("show");
         });
-            // Save scroll position before updating order
-    $("#editOrderForm").on("submit", function() {
-        localStorage.setItem('scrollPos', $(window).scrollTop());
     });
-    });
-});
-// Add to existing order
-$(".add-to-group").click(function(e) {
-    e.preventDefault();
-    var sessionId = $(this).data("session-id");
-    
-    // Fetch order group info
-    $.get("/order-group-info/" + sessionId + "/", function(data) {
-        // Set waiter info
-        $("#addOrderWaiter").text(data.waiter_name || 'N/A');
-        
-        // Set location info
-        var locationText = '';
-        if (data.location_type === 'table') {
-            locationText = 'Table';
-            if (data.location_detail) locationText += ' #' + data.location_detail;
-        } else if (data.location_type === 'takeaway') {
-            locationText = 'Takeaway';
-            if (data.location_detail) locationText += ' #' + data.location_detail;
-        } else {
-            locationText = data.location_detail || 'Other';
-        }
-        $("#addOrderLocation").text(locationText);
-        
-        // Set current total
-        $("#addOrderCurrentTotal").text(data.total_amount.toLocaleString() + ' /=');
-        
-        // Set existing items
-        var existingHtml = '<div class="d-flex flex-wrap gap-1">';
-        data.existing_items.forEach(function(item) {
-            existingHtml += `
-                <span class="badge fs-6 p-1" style="background-color: var(--secondary);">
-                    ${item.menu_item_name}
-                    <span class="badge bg-light text-dark ms-1">×${item.quantity}</span>
-                </span>
-            `;
+    $(document).on("submit", "#editOrderForm", function() { localStorage.setItem('scrollPos', $(window).scrollTop()); });
+    $(document).on("click", ".add-to-group", function(e) {
+        e.preventDefault(); var sessionId = $(this).data("session-id");
+        $.get("/order-group-info/" + sessionId + "/", function(data) {
+            $("#addOrderWaiter").text(data.waiter_name || 'N/A');
+            var loc = data.location_type === 'table' ? 'Table' : data.location_type === 'takeaway' ? 'Takeaway' : (data.location_detail || 'Other');
+            if (data.location_detail && data.location_type !== 'other') loc += ' #' + data.location_detail;
+            $("#addOrderLocation").text(loc); $("#addOrderCurrentTotal").text(data.total_amount.toLocaleString() + ' /=');
+            var html = '<div class="d-flex flex-wrap gap-1">';
+            data.existing_items.forEach(function(item) { html += '<span class="badge" style="background-color:var(--secondary); font-size:11px;">' + item.menu_item_name + '<span class="badge bg-light text-dark ms-1" style="font-size:10px;">x' + item.quantity + '</span></span>'; });
+            html += '</div>'; $("#addOrderExistingItems").html(html);
+            if (data.notes) { $("#addOrderNotes").text(data.notes); $("#addOrderNotesContainer").show(); } else { $("#addOrderNotesContainer").hide(); }
+            $(".add-menu-checkbox").prop('checked', false).each(function() { $("#add_quantity_" + $(this).data('item-id')).prop('disabled', true).val(1); });
+            $("#addToOrderForm").attr('action', '/add-to-order/' + sessionId + '/'); $("#addToOrderModal").modal('show');
         });
-        existingHtml += '</div>';
-        $("#addOrderExistingItems").html(existingHtml);
-        
-        // Set notes
-        if (data.notes) {
-            $("#addOrderNotes").text(data.notes);
-            $("#addOrderNotesContainer").show();
-        } else {
-            $("#addOrderNotesContainer").hide();
-        }
-        
-        // Reset form
-        $(".add-menu-checkbox").prop('checked', false);
-        $(".add-menu-checkbox").each(function() {
-            var itemId = $(this).data('item-id');
-            $("#add_quantity_" + itemId).prop('disabled', true).val(1);
-        });
-        
-        // Set form action
-        $("#addToOrderForm").attr('action', '/add-to-order/' + sessionId + '/');
-        
-        // Show modal
-        $("#addToOrderModal").modal('show');
     });
-        // Save scroll position before adding items to order
-    $("#addToOrderForm").on("submit", function() {
-        localStorage.setItem('scrollPos', $(window).scrollTop());
-    });
-});
-
-// Enable/disable quantity inputs in add modal
-$(".add-menu-checkbox").change(function() {
-    var itemId = $(this).data('item-id');
-    $("#add_quantity_" + itemId).prop('disabled', !$(this).is(':checked'));
-});
-        // Toggle Open/Closed status using AJAX
+    $(document).on("submit", "#addToOrderForm", function() { localStorage.setItem('scrollPos', $(window).scrollTop()); });
+    $(document).on("change", ".add-menu-checkbox", function() { $("#add_quantity_" + $(this).data('item-id')).prop('disabled', !$(this).is(':checked')); });
     $(document).on("click", ".toggle-group-status", function (e) {
-        e.preventDefault();
-        var $btn = $(this);
-        var sessionId = $btn.data("session-id");
-        var scrollPosition = $(window).scrollTop();
-        
-        $.ajax({
-            url: "/toggle-group-status/" + sessionId + "/",
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}"
-            },
-            success: function(response) {
-                // Reload the page but maintain scroll position
-                location.reload();
-            },
-            error: function() {
-                alert("Error toggling status. Please try again.");
-            }
-        });
+        e.preventDefault(); var sessionId = $(this).data("session-id");
+        $.ajax({ url: "/toggle-group-status/" + sessionId + "/", method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}" }, success: function() { location.reload(); } });
     });
+});
 </script>
 {% endblock %}
