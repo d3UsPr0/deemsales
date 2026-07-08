@@ -459,6 +459,33 @@
     </div>
   </div></div>
 </div>
+
+<!-- Export Custom Range Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--secondary); color: white;">
+        <h5 class="modal-title"><i class="fas fa-calendar"></i> Custom Date Range</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="exportForm" method="get" action="{% url 'export_excel' %}">
+          <div class="mb-2">
+            <label class="form-label small">From Date</label>
+            <input type="date" class="form-control form-control-sm" name="date_from" id="date_from">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small">To Date</label>
+            <input type="date" class="form-control form-control-sm" name="date_to" id="date_to">
+          </div>
+          <button type="submit" class="btn btn-success btn-sm w-100">
+            <i class="fas fa-download"></i> Export
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}

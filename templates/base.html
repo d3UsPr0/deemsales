@@ -325,16 +325,30 @@
                 <i class="fas fa-utensils"></i> DEEM <span>Sales</span>
             </a>
             <div class="d-flex align-items-center">
-                {% if user.is_authenticated %}
+                                {% if user.is_authenticated %}
                     <span class="text-white me-3" style="font-size:13px;">
                         <i class="fas fa-user"></i> {{ user.username }}
                         {% if user.is_staff %}<span class="badge bg-warning text-dark" style="font-size:10px;">Admin</span>{% endif %}
                     </span>
+                    
                     {% if user.is_staff %}
-                        <a href="{% url 'export_excel' %}" class="btn btn-sm btn-light me-2" style="font-size:12px;">
-                            <i class="fas fa-download"></i> Export Today
-                        </a>
+                    <div class="dropdown me-2">
+                        <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="font-size:12px;">
+                            <i class="fas fa-chart-bar"></i> Reports
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;">
+                            <li><h6 class="dropdown-header" style="font-size:11px;">Quick Export</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'export_excel' %}?preset=today"><i class="fas fa-calendar-day"></i> Today</a></li>
+                            <li><a class="dropdown-item" href="{% url 'export_excel' %}?preset=yesterday"><i class="fas fa-calendar-check"></i> Yesterday</a></li>
+                            <li><a class="dropdown-item" href="{% url 'export_excel' %}?preset=this_week"><i class="fas fa-calendar-week"></i> This Week</a></li>
+                            <li><a class="dropdown-item" href="{% url 'export_excel' %}?preset=this_month"><i class="fas fa-calendar-alt"></i> This Month</a></li>
+                            <li><a class="dropdown-item" href="{% url 'export_excel' %}?preset=last_month"><i class="fas fa-calendar"></i> Last Month</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#exportModal"><i class="fas fa-calendar-plus"></i> Custom Range...</a></li>
+                        </ul>
+                    </div>
                     {% endif %}
+                    
                     <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="font-size:12px;">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
