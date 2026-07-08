@@ -516,10 +516,23 @@ $(document).ready(function () {
     $("#confirmSubmit").click(function () { localStorage.setItem('scrollToOrders', 'true'); $("#orderForm").submit(); });
     $(document).on("click", ".view-group", function () { $("#details-" + $(this).data("session-id")).toggle(); });
     $(document).on("click", ".delete-group", function () {
-        if (confirm("Delete this entire order?")) { localStorage.setItem('scrollPos', $(window).scrollTop()); $("body").append($('<form method="post" action="/delete-group/' + $(this).data("session-id") + '/">{% csrf_token %}</form>').submit()); }
+        if (confirm("Delete this entire order? This cannot be undone!")) {
+            localStorage.setItem('scrollPos', $(window).scrollTop());
+            var form = $('<form method="post" action="/delete-group/' + $(this).data("session-id") + '/"></form>');
+            form.append('{% csrf_token %}');
+            $("body").append(form);
+            form.submit();
+        }
     });
+    
     $(document).on("click", ".delete-order", function () {
-        if (confirm("Delete this order?")) { localStorage.setItem('scrollPos', $(window).scrollTop()); $("body").append($('<form method="post" action="/delete-order/' + $(this).data("order-id") + '/">{% csrf_token %}</form>').submit()); }
+        if (confirm("Delete this order?")) {
+            localStorage.setItem('scrollPos', $(window).scrollTop());
+            var form = $('<form method="post" action="/delete-order/' + $(this).data("order-id") + '/"></form>');
+            form.append('{% csrf_token %}');
+            $("body").append(form);
+            form.submit();
+        }
     });
     $(document).on("click", ".edit-order", function (e) {
         e.preventDefault(); var orderId = $(this).data("order-id");
