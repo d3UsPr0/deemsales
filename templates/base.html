@@ -271,12 +271,28 @@
         }
         
         /* ===== ALERTS ===== */
-        .alert {
-            font-size: 13px;
-            padding: 8px 14px;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
+        
+.alert {
+    font-size: 13px;
+    padding: 8px 40px 8px 14px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    position: relative;
+}
+
+.alert .btn-close {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+    background-size: 10px;
+    opacity: 0.7;
+}
+
         
         /* ===== FOOTER STATS ===== */
         .stat-card {
@@ -309,6 +325,7 @@
             cursor: pointer;
             white-space: nowrap;
         }
+
         
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
@@ -319,19 +336,25 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark">
+        <nav class="navbar navbar-dark">
         <div class="container">
             <a class="navbar-brand" href="{% url 'home' %}">
                 <i class="fas fa-utensils"></i> DEEM <span>Sales</span>
             </a>
             <div class="d-flex align-items-center">
-                                {% if user.is_authenticated %}
+                {% if user.is_authenticated %}
                     <span class="text-white me-3" style="font-size:13px;">
-                        <i class="fas fa-user"></i> {{ user.username }}
-                        {% if user.is_staff %}<span class="badge bg-warning text-dark" style="font-size:10px;">Admin</span>{% endif %}
+                        <i class="fas fa-user"></i> {{ user.first_name|default:user.username }}
+                        {% if user.profile.role == 'admin' %}
+                            <span class="badge bg-danger" style="font-size:10px;">Admin</span>
+                        {% elif user.profile.role == 'manager' %}
+                            <span class="badge" style="background-color: var(--accent); font-size:10px;">Manager</span>
+                        {% elif user.profile.role == 'cashier' %}
+                            <span class="badge" style="background-color: var(--secondary); font-size:10px;">Cashier</span>
+                        {% endif %}
                     </span>
                     
-                    {% if user.is_staff %}
+                    {% if user.profile.role == 'admin' or user.profile.role == 'manager' %}
                     <div class="dropdown me-2">
                         <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="font-size:12px;">
                             <i class="fas fa-chart-bar"></i> Reports
@@ -345,10 +368,23 @@
                             <li><a class="dropdown-item" href="{% url 'export_excel' %}?preset=last_month"><i class="fas fa-calendar"></i> Last Month</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#exportModal"><i class="fas fa-calendar-plus"></i> Custom Range...</a></li>
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            <li><h6 class="dropdown-header" style="font-size:11px;">Management</h6></li>
+                            <li><a class="dropdown-item" href="{% url 'menu_management' %}"><i class="fas fa-utensils"></i> Menu Management</a></li>
+                            
+                            {% if user.profile.role == 'admin' or user.is_superuser %}
+                            <li><a class="dropdown-item" href="{% url 'user_management' %}"><i class="fas fa-users-cog"></i> User Management</a></li>
+                            <li><a class="dropdown-item" href="{% url 'audit_log' %}"><i class="fas fa-history"></i> Audit Log</a></li>
+                            <li><a class="dropdown-item" href="/admin/" target="_blank"><i class="fas fa-cog"></i> Django Admin</a></li>
+                            {% endif %}
+
                         </ul>
                     </div>
                     {% endif %}
-                    
+                    <a href="{% url 'expenses_view' %}" class="btn btn-sm btn-warning me-2" style="font-size:12px; color: white;">
+                        <i class="fas fa-money-bill-wave"></i> Expenses
+                    </a>
                     <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="font-size:12px;">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
@@ -358,14 +394,16 @@
     </nav>
     
     <div class="container main-content">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" style="font-size:10px;"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+        
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
         
         {% block content %}{% endblock %}
     </div>

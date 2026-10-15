@@ -1,0 +1,618 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<!-- Header -->
+<div class="card shadow mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center" 
+       style="background-color: var(--primary); color: white; padding: 8px 15px;">
+    <h5 class="mb-0" style="font-size:14px; font-weight:700;">
+      <i class="fas fa-utensils"></i> Menu Management
+    </h5>
+    <a href="{% url 'home' %}" class="btn btn-light btn-sm">
+      <i class="fas fa-arrow-left"></i> Back to Orders
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="card-body" style="padding: 10px 15px;">
+    <div class="row text-center g-2">
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(84,11,2,0.08); color: var(--primary);">
+          <i class="fas fa-layer-group"></i>
+          <h6>Categories</h6>
+          <h3>{{ total_categories }}</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(0,182,82,0.1); color: var(--secondary);">
+          <i class="fas fa-utensils"></i>
+          <h6>Menu Items</h6>
+          <h3>{{ total_items }}</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(247,148,29,0.1); color: var(--accent);">
+          <i class="fas fa-check-circle"></i>
+          <h6>Available</h6>
+          <h3>{{ available_items }}</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(23,162,184,0.1); color: #17a2b8;">
+          <i class="fas fa-user-tie"></i>
+          <h6>Active Waiters</h6>
+          <h3>{{ active_waiters }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs mb-3" id="menuTabs" role="tablist" style="font-size:13px;">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories" type="button">
+      <i class="fas fa-layer-group"></i> Categories ({{ total_categories }})
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items" type="button">
+      <i class="fas fa-utensils"></i> Menu Items ({{ total_items }})
+    </button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="waiters-tab" data-bs-toggle="tab" data-bs-target="#waiters" type="button">
+      <i class="fas fa-user-tie"></i> Waiters ({{ total_waiters }})
+    </button>
+  </li>
+</ul>
+
+<div class="tab-content">
+
+  <!-- ============ CATEGORIES TAB ============ -->
+  <div class="tab-pane fade show active" id="categories">
+    <div class="card shadow">
+      <div class="card-header d-flex justify-content-between align-items-center" 
+           style="background-color: var(--secondary); color: white; padding: 8px 15px;">
+        <h6 class="mb-0" style="font-size:13px;"><i class="fas fa-layer-group"></i> Menu Categories</h6>
+        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
+          <i class="fas fa-plus"></i> Add Category
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width:50px;">Order</th>
+              <th>Name</th>
+              <th style="width:120px;">Items</th>
+              <th style="width:180px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for cat in categories %}
+            <tr>
+              <td class="text-center">
+                <span class="badge bg-secondary">{{ cat.display_order }}</span>
+              </td>
+              <td><strong>{{ cat.name }}</strong></td>
+              <td class="text-center">
+                <span class="badge" style="background-color: var(--accent);">{{ cat.items.count }} items</span>
+              </td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-warning edit-category-btn"
+                          data-id="{{ cat.id }}"
+                          data-name="{{ cat.name }}"
+                          data-order="{{ cat.display_order }}"
+                          title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-danger delete-category-btn"
+                          data-id="{{ cat.id }}"
+                          data-name="{{ cat.name }}"
+                          data-count="{{ cat.items.count }}"
+                          title="Delete">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-4 text-muted">
+                <i class="fas fa-layer-group fa-2x mb-2 d-block"></i>
+                No categories yet. Add your first category!
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MENU ITEMS TAB ============ -->
+  <div class="tab-pane fade" id="items">
+    <div class="card shadow">
+      <div class="card-header d-flex justify-content-between align-items-center" 
+           style="background-color: var(--secondary); color: white; padding: 8px 15px;">
+        <h6 class="mb-0" style="font-size:13px;"><i class="fas fa-utensils"></i> Menu Items</h6>
+        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addItemModal">
+          <i class="fas fa-plus"></i> Add Menu Item
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width:120px;">Category</th>
+              <th>Item Name</th>
+              <th style="width:100px;">Price</th>
+              <th style="width:80px;">Available</th>
+              <th style="width:80px;">Order</th>
+              <th style="width:180px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in menu_items %}
+            <tr>
+              <td>
+                <span class="badge" style="background-color: var(--accent);">
+                  {{ item.category.name }}
+                </span>
+              </td>
+              <td><strong>{{ item.name }}</strong></td>
+              <td>{{ item.price|floatformat:"0"|intcomma }} /=</td>
+              <td class="text-center">
+                {% if item.is_available %}
+                  <span class="badge" style="background-color: #28a745;">Yes</span>
+                {% else %}
+                  <span class="badge bg-secondary">No</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <span class="badge bg-secondary">{{ item.display_order }}</span>
+              </td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-warning edit-item-btn"
+                          data-id="{{ item.id }}"
+                          data-name="{{ item.name }}"
+                          data-category="{{ item.category.id }}"
+                          data-price="{{ item.price }}"
+                          data-order="{{ item.display_order }}"
+                          data-available="{{ item.is_available|yesno:'true,false' }}"
+                          title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-info toggle-item-btn"
+                          data-id="{{ item.id }}"
+                          data-name="{{ item.name }}"
+                          data-available="{{ item.is_available|yesno:'true,false' }}"
+                          title="Toggle Availability">
+                    <i class="fas fa-toggle-on"></i>
+                  </button>
+                  <button class="btn btn-danger delete-item-btn"
+                          data-id="{{ item.id }}"
+                          data-name="{{ item.name }}"
+                          title="Delete">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">
+                <i class="fas fa-utensils fa-2x mb-2 d-block"></i>
+                No menu items yet. Add your first item!
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ WAITERS TAB ============ -->
+  <div class="tab-pane fade" id="waiters">
+    <div class="card shadow">
+      <div class="card-header d-flex justify-content-between align-items-center" 
+           style="background-color: var(--secondary); color: white; padding: 8px 15px;">
+        <h6 class="mb-0" style="font-size:13px;"><i class="fas fa-user-tie"></i> Waiters</h6>
+        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addWaiterModal">
+          <i class="fas fa-plus"></i> Add Waiter
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Full Name</th>
+              <th>Display Name</th>
+              <th style="width:100px;">Status</th>
+              <th style="width:200px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for waiter in waiters %}
+            <tr class="{% if not waiter.is_active %}table-secondary{% endif %}">
+              <td><strong>{{ waiter.full_name }}</strong></td>
+              <td>
+                <span class="badge" style="background-color: var(--primary);">{{ waiter.display_name }}</span>
+              </td>
+              <td class="text-center">
+                {% if waiter.is_active %}
+                  <span class="badge" style="background-color: #28a745;">Active</span>
+                {% else %}
+                  <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="btn-group btn-group-sm">
+                  <button class="btn btn-warning edit-waiter-btn"
+                          data-id="{{ waiter.id }}"
+                          data-full="{{ waiter.full_name }}"
+                          data-display="{{ waiter.display_name }}"
+                          data-active="{{ waiter.is_active|yesno:'true,false' }}"
+                          title="Edit">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-info toggle-waiter-btn"
+                          data-id="{{ waiter.id }}"
+                          data-name="{{ waiter.display_name }}"
+                          data-active="{{ waiter.is_active|yesno:'true,false' }}"
+                          title="Toggle Status">
+                    <i class="fas fa-toggle-on"></i>
+                  </button>
+                  <button class="btn btn-danger delete-waiter-btn"
+                          data-id="{{ waiter.id }}"
+                          data-name="{{ waiter.display_name }}"
+                          title="Delete">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center py-4 text-muted">
+                <i class="fas fa-user-tie fa-2x mb-2 d-block"></i>
+                No waiters yet. Add your first waiter!
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============ CATEGORY MODALS ============ -->
+
+<!-- Add Category -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--secondary); color: white;">
+        <h5 class="modal-title"><i class="fas fa-plus"></i> Add Category</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'add_category' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">Category Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="name" required maxlength="50">
+          <label class="form-label mt-2">Display Order</label>
+          <input type="number" class="form-control form-control-sm" name="display_order" value="0" min="0">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-save"></i> Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Category -->
+<div class="modal fade" id="editCategoryModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--accent); color: white;">
+        <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Category</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="editCategoryForm">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">Category Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="name" id="editCatName" required maxlength="50">
+          <label class="form-label mt-2">Display Order</label>
+          <input type="number" class="form-control form-control-sm" name="display_order" id="editCatOrder" value="0" min="0">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-save"></i> Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MENU ITEM MODALS ============ -->
+
+<!-- Add Menu Item -->
+<div class="modal fade" id="addItemModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--secondary); color: white;">
+        <h5 class="modal-title"><i class="fas fa-plus"></i> Add Menu Item</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'add_menu_item' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Item Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" name="name" required maxlength="100">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select form-select-sm" name="category" required>
+                <option value="">-- Select --</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Price (TZS) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control form-control-sm" name="price" required min="0" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Display Order</label>
+              <input type="number" class="form-control form-control-sm" name="display_order" value="0" min="0">
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="is_available" id="addItemAvail" checked>
+                <label class="form-check-label" for="addItemAvail">Available for ordering</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-save"></i> Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Menu Item -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--accent); color: white;">
+        <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Menu Item</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="editItemForm">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label">Item Name <span class="text-danger">*</span></label>
+              <input type="text" class="form-control form-control-sm" name="name" id="editItemName" required maxlength="100">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Category <span class="text-danger">*</span></label>
+              <select class="form-select form-select-sm" name="category" id="editItemCategory" required>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}">{{ cat.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Price (TZS) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control form-control-sm" name="price" id="editItemPrice" required min="0" step="0.01">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Display Order</label>
+              <input type="number" class="form-control form-control-sm" name="display_order" id="editItemOrder" value="0" min="0">
+            </div>
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="is_available" id="editItemAvail">
+                <label class="form-check-label" for="editItemAvail">Available for ordering</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-save"></i> Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============ WAITER MODALS ============ -->
+
+<!-- Add Waiter -->
+<div class="modal fade" id="addWaiterModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--secondary); color: white;">
+        <h5 class="modal-title"><i class="fas fa-plus"></i> Add Waiter</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'add_waiter' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">Full Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="full_name" required maxlength="100">
+          <label class="form-label mt-2">Display Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="display_name" required maxlength="50" 
+                 placeholder="Short name shown on orders">
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" name="is_active" id="addWaiterActive" checked>
+            <label class="form-check-label" for="addWaiterActive">Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-save"></i> Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Waiter -->
+<div class="modal fade" id="editWaiterModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--accent); color: white;">
+        <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Waiter</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="editWaiterForm">
+        {% csrf_token %}
+        <div class="modal-body">
+          <label class="form-label">Full Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="full_name" id="editWaiterFull" required maxlength="100">
+          <label class="form-label mt-2">Display Name <span class="text-danger">*</span></label>
+          <input type="text" class="form-control form-control-sm" name="display_name" id="editWaiterDisplay" required maxlength="50">
+          <div class="form-check form-switch mt-2">
+            <input class="form-check-input" type="checkbox" name="is_active" id="editWaiterActive">
+            <label class="form-check-label" for="editWaiterActive">Active</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-save"></i> Update</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+
+    // ========== CATEGORY ACTIONS ==========
+    $('.edit-category-btn').click(function() {
+        var id = $(this).data('id');
+        $('#editCatName').val($(this).data('name'));
+        $('#editCatOrder').val($(this).data('order'));
+        $('#editCategoryForm').attr('action', '/menu/category/edit/' + id + '/');
+        $('#editCategoryModal').modal('show');
+    });
+    
+    $('.delete-category-btn').click(function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        var count = $(this).data('count');
+        
+        if (count > 0) {
+            alert('Cannot delete "' + name + '" — it has ' + count + ' menu items.\n\nDelete or move the items first.');
+            return;
+        }
+        
+        if (confirm('Delete category "' + name + '"?')) {
+            var form = $('<form method="post" action="/menu/category/delete/' + id + '/"></form>');
+            form.append('{% csrf_token %}');
+            $('body').append(form);
+            form.submit();
+        }
+    });
+
+    // ========== MENU ITEM ACTIONS ==========
+    $('.edit-item-btn').click(function() {
+        var id = $(this).data('id');
+        $('#editItemName').val($(this).data('name'));
+        $('#editItemCategory').val($(this).data('category'));
+        $('#editItemPrice').val($(this).data('price'));
+        $('#editItemOrder').val($(this).data('order'));
+        $('#editItemAvail').prop('checked', $(this).data('available') === true);
+        $('#editItemForm').attr('action', '/menu/item/edit/' + id + '/');
+        $('#editItemModal').modal('show');
+    });
+    
+    $('.toggle-item-btn').click(function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        var isAvailable = $(this).data('available') === true;
+        var action = isAvailable ? 'unavailable' : 'available';
+        
+        if (confirm('Mark "' + name + '" as ' + action + '?')) {
+            var form = $('<form method="post" action="/menu/item/toggle/' + id + '/"></form>');
+            form.append('{% csrf_token %}');
+            $('body').append(form);
+            form.submit();
+        }
+    });
+    
+    $('.delete-item-btn').click(function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        
+        if (confirm('Delete menu item "' + name + '"?\n\nExisting orders will NOT be affected.')) {
+            var form = $('<form method="post" action="/menu/item/delete/' + id + '/"></form>');
+            form.append('{% csrf_token %}');
+            $('body').append(form);
+            form.submit();
+        }
+    });
+
+    // ========== WAITER ACTIONS ==========
+    $('.edit-waiter-btn').click(function() {
+        var id = $(this).data('id');
+        $('#editWaiterFull').val($(this).data('full'));
+        $('#editWaiterDisplay').val($(this).data('display'));
+        $('#editWaiterActive').prop('checked', $(this).data('active') === true);
+        $('#editWaiterForm').attr('action', '/menu/waiter/edit/' + id + '/');
+        $('#editWaiterModal').modal('show');
+    });
+    
+    $('.toggle-waiter-btn').click(function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        var isActive = $(this).data('active') === true;
+        var action = isActive ? 'deactivate' : 'activate';
+        
+        if (confirm('Are you sure you want to ' + action + ' "' + name + '"?')) {
+            var form = $('<form method="post" action="/menu/waiter/toggle/' + id + '/"></form>');
+            form.append('{% csrf_token %}');
+            $('body').append(form);
+            form.submit();
+        }
+    });
+    
+    $('.delete-waiter-btn').click(function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        
+        if (confirm('Delete waiter "' + name + '"?\n\nThis cannot be undone.')) {
+            var form = $('<form method="post" action="/menu/waiter/delete/' + id + '/"></form>');
+            form.append('{% csrf_token %}');
+            $('body').append(form);
+            form.submit();
+        }
+    });
+
+});
+</script>
+{% endblock %}

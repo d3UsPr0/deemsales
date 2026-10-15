@@ -1,0 +1,247 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<!-- Header -->
+<div class="card shadow mb-3">
+  <div class="card-header d-flex justify-content-between align-items-center" 
+       style="background-color: var(--primary); color: white; padding: 8px 15px;">
+    <h5 class="mb-0" style="font-size:14px; font-weight:700;">
+      <i class="fas fa-history"></i> System Audit Log
+    </h5>
+    <a href="{% url 'home' %}" class="btn btn-light btn-sm">
+      <i class="fas fa-arrow-left"></i> Back to Orders
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="card-body" style="padding: 10px 15px;">
+    <div class="row text-center g-2">
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(84,11,2,0.08); color: var(--primary);">
+          <i class="fas fa-list"></i>
+          <h6>Total Logs</h6>
+          <h3>{{ total_logs }}</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(247,148,29,0.1); color: var(--accent);">
+          <i class="fas fa-edit"></i>
+          <h6>Updates</h6>
+          <h3>{{ update_count }}</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(220,53,69,0.1); color: #dc3545;">
+          <i class="fas fa-trash"></i>
+          <h6>Deletes</h6>
+          <h3>{{ delete_count }}</h3>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="stat-card" style="background: rgba(0,182,82,0.1); color: var(--secondary);">
+          <i class="fas fa-calendar-day"></i>
+          <h6>Today</h6>
+          <h3>{{ today_logs }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card shadow mb-3">
+  <div class="card-body" style="padding: 10px 15px;">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-2">
+        <label class="form-label mb-0 small fw-bold">Action</label>
+        <select class="form-select form-select-sm" name="action">
+          <option value="">All</option>
+          <option value="update" {% if action_filter == 'update' %}selected{% endif %}>Update</option>
+          <option value="delete" {% if action_filter == 'delete' %}selected{% endif %}>Delete</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-0 small fw-bold">Model</label>
+        <select class="form-select form-select-sm" name="model">
+          <option value="">All</option>
+          <option value="Order" {% if model_filter == 'Order' %}selected{% endif %}>Order</option>
+          <option value="MenuItem" {% if model_filter == 'MenuItem' %}selected{% endif %}>Menu Item</option>
+          <option value="MenuCategory" {% if model_filter == 'MenuCategory' %}selected{% endif %}>Menu Category</option>
+          <option value="Waiter" {% if model_filter == 'Waiter' %}selected{% endif %}>Waiter</option>
+          <option value="Expense" {% if model_filter == 'Expense' %}selected{% endif %}>Expense</option>
+          <option value="User" {% if model_filter == 'User' %}selected{% endif %}>User</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-0 small fw-bold">User</label>
+        <input type="text" class="form-control form-control-sm" name="user" 
+               value="{{ user_filter }}" placeholder="username">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label mb-0 small fw-bold">Date</label>
+        <input type="date" class="form-control form-control-sm" name="date" value="{{ date_filter }}">
+      </div>
+      <div class="col-md-4 text-end">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-filter"></i> Filter</button>
+        <a href="{% url 'audit_log' %}" class="btn btn-secondary btn-sm"><i class="fas fa-redo"></i> Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Logs Table -->
+<div class="card shadow">
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th style="width:140px;">When</th>
+          <th style="width:80px;">Action</th>
+          <th style="width:110px;">Model</th>
+          <th style="width:80px;">ID</th>
+          <th>Object</th>
+          <th>Changes</th>
+          <th style="width:100px;">By</th>
+          <th style="width:60px;">Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td>
+            <small>
+              <i class="far fa-clock"></i> {{ log.performed_at|date:"d/m/Y H:i" }}
+            </small>
+          </td>
+          <td>
+            {% if log.action == 'update' %}
+              <span class="badge" style="background-color: var(--accent);">
+                <i class="fas fa-edit"></i> Update
+              </span>
+            {% else %}
+              <span class="badge bg-danger">
+                <i class="fas fa-trash"></i> Delete
+              </span>
+            {% endif %}
+          </td>
+          <td>
+            <small class="badge bg-secondary">{{ log.model_name }}</small>
+          </td>
+          <td><small>#{{ log.object_id }}</small></td>
+          <td>
+            <strong style="font-size:12px;">{{ log.object_repr|truncatechars:50 }}</strong>
+          </td>
+          <td>
+            {% if log.action == 'update' %}
+              {% with changes=log.get_changed_fields %}
+                {% if changes %}
+                  <small class="text-muted">
+                    {{ changes|length }} field{{ changes|length|pluralize }} changed
+                  </small>
+                {% else %}
+                  <small class="text-muted">No changes</small>
+                {% endif %}
+              {% endwith %}
+            {% else %}
+              <small class="text-danger">
+                <i class="fas fa-info-circle"></i> Deleted
+              </small>
+            {% endif %}
+          </td>
+          <td>
+            <small>{{ log.performed_by.username|default:"system" }}</small>
+          </td>
+          <td class="text-center">
+            <button class="btn btn-sm btn-info view-log-btn" 
+                    data-log-id="{{ log.id }}" title="View Details">
+              <i class="fas fa-eye"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center py-4 text-muted">
+            <i class="fas fa-history fa-2x mb-2 d-block"></i>
+            No audit logs found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ LOG DETAILS MODAL ============ -->
+<div class="modal fade" id="logDetailsModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--primary); color: white;">
+        <h5 class="modal-title"><i class="fas fa-info-circle"></i> Audit Log Details</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="logDetailsBody">
+        <!-- Filled via JS -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    $('.view-log-btn').click(function() {
+        var logId = $(this).data('log-id');
+        
+        // Find log data from page
+        // We'll fetch from server instead
+        $.get('/audit-log/detail/' + logId + '/', function(data) {
+            var html = '<div class="row g-2">';
+            
+            // Header info
+            html += '<div class="col-md-6"><strong>When:</strong> ' + data.performed_at + '</div>';
+            html += '<div class="col-md-6"><strong>Action:</strong> ' + data.action + '</div>';
+            html += '<div class="col-md-6"><strong>Model:</strong> ' + data.model_name + ' #' + data.object_id + '</div>';
+            html += '<div class="col-md-6"><strong>By:</strong> ' + data.performed_by + '</div>';
+            html += '<div class="col-12"><strong>Object:</strong> ' + data.object_repr + '</div>';
+            
+            if (data.ip_address) {
+                html += '<div class="col-12"><strong>IP:</strong> ' + data.ip_address + '</div>';
+            }
+            
+            html += '</div><hr>';
+            
+            // Changes
+            if (data.action === 'Update' && data.changes && data.changes.length > 0) {
+                html += '<h6><i class="fas fa-exchange-alt"></i> Changed Fields</h6>';
+                html += '<table class="table table-sm table-bordered">';
+                html += '<thead class="table-warning"><tr><th>Field</th><th>Before</th><th>After</th></tr></thead><tbody>';
+                data.changes.forEach(function(c) {
+                    html += '<tr><td><strong>' + c.field + '</strong></td>';
+                    html += '<td><span class="text-danger">' + (c.before || '<em>empty</em>') + '</span></td>';
+                    html += '<td><span class="text-success">' + (c.after || '<em>empty</em>') + '</span></td></tr>';
+                });
+                html += '</tbody></table>';
+            } else if (data.action === 'Delete') {
+                html += '<h6><i class="fas fa-trash"></i> Deleted Data</h6>';
+                html += '<table class="table table-sm table-bordered">';
+                html += '<thead class="table-danger"><tr><th>Field</th><th>Value</th></tr></thead><tbody>';
+                if (data.data_before) {
+                    Object.keys(data.data_before).forEach(function(key) {
+                        html += '<tr><td><strong>' + key + '</strong></td><td>' + (data.data_before[key] || '<em>empty</em>') + '</td></tr>';
+                    });
+                }
+                html += '</tbody></table>';
+            }
+            
+            $('#logDetailsBody').html(html);
+            $('#logDetailsModal').modal('show');
+        });
+    });
+});
+</script>
+{% endblock %}
