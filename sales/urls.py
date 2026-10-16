@@ -54,4 +54,7 @@ urlpatterns = [
     path('audit-log/', views.audit_log_view, name='audit_log'),
     path('audit-log/detail/<int:log_id>/', views.audit_log_detail, name='audit_log_detail'),
     
+    # Session Keep Alive
+    path('keep-alive/', views.keep_alive, name='keep_alive'),
+    
 ]

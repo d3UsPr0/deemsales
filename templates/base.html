@@ -411,5 +411,125 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_scripts %}{% endblock %}
+
+
+        <!-- Session Timeout Warning Modal -->
+    <div class="modal fade" id="sessionTimeoutModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: var(--accent); color: white;">
+                    <h5 class="modal-title">
+                        <i class="fas fa-clock"></i> Session Expiring
+                    </h5>
+                </div>
+                <div class="modal-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x mb-3" style="color: var(--accent);"></i>
+                    <h5>Are you still there?</h5>
+                    <p class="mb-0">Your session will expire in <strong><span id="countdownTimer">60</span> seconds</strong> due to inactivity.</p>
+                    <p class="text-muted mt-2" style="font-size:12px;">Click "Stay Logged In" to continue using the system.</p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-primary" id="stayLoggedInBtn">
+                        <i class="fas fa-check"></i> Stay Logged In
+                    </button>
+                    <a href="{% url 'logout' %}" class="btn btn-secondary">
+                        <i class="fas fa-sign-out-alt"></i> Logout Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+    // ============================================================
+    // SESSION TIMEOUT - Warn user 60 seconds before session ends
+    // ============================================================
+    (function() {
+        {% if user.is_authenticated %}
+        // Total idle timeout: 5 minutes = 300 seconds
+        // Warning appears at 4 minutes (240s), giving 60s to respond
+        var IDLE_TIMEOUT = 300;         // 5 min - session expires
+        var WARNING_TIME = 60;          // Warn 60 seconds before
+        
+        var idleTimer;
+        var countdownInterval;
+        var warningShown = false;
+        
+        function resetIdleTimer() {
+            // Clear existing timers
+            clearTimeout(idleTimer);
+            clearInterval(countdownInterval);
+            warningShown = false;
+            
+            // Close modal if open
+            var modal = bootstrap.Modal.getInstance(document.getElementById('sessionTimeoutModal'));
+            if (modal) modal.hide();
+            
+            // Set new timer to show warning at (IDLE_TIMEOUT - WARNING_TIME) seconds
+            idleTimer = setTimeout(showWarning, (IDLE_TIMEOUT - WARNING_TIME) * 1000);
+        }
+        
+        function showWarning() {
+            if (warningShown) return;
+            warningShown = true;
+            
+            // Show modal
+            var modal = new bootstrap.Modal(document.getElementById('sessionTimeoutModal'));
+            modal.show();
+            
+            // Start countdown
+            var secondsLeft = WARNING_TIME;
+            document.getElementById('countdownTimer').textContent = secondsLeft;
+            
+            countdownInterval = setInterval(function() {
+                secondsLeft--;
+                document.getElementById('countdownTimer').textContent = secondsLeft;
+                
+                if (secondsLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    // Redirect to logout
+                    window.location.href = "{% url 'logout' %}";
+                }
+            }, 1000);
+        }
+        
+        // Activity events to reset timer
+        var activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        
+        activityEvents.forEach(function(event) {
+            document.addEventListener(event, function() {
+                // Don't reset if warning modal is showing
+                // (user must explicitly click "Stay Logged In")
+                if (!warningShown) {
+                    resetIdleTimer();
+                }
+            }, true);
+        });
+        
+        // "Stay Logged In" button
+        document.getElementById('stayLoggedInBtn').addEventListener('click', function() {
+            // Hide modal
+            var modal = bootstrap.Modal.getInstance(document.getElementById('sessionTimeoutModal'));
+            if (modal) modal.hide();
+            
+            // Make a request to keep session alive
+            fetch('{% url "keep_alive" %}', {
+                method: 'GET',
+                credentials: 'same-origin'
+            }).then(function() {
+                // Reset idle timer
+                warningShown = false;
+                resetIdleTimer();
+            }).catch(function() {
+                // On error, redirect to logout
+                window.location.href = "{% url 'logout' %}";
+            });
+        });
+        
+        // Initialize timer on page load
+        resetIdleTimer();
+        {% endif %}
+    })();
+    </script>
 </body>
 </html>

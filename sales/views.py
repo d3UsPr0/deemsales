@@ -74,10 +74,15 @@ def login_view(request):
         
         if user is not None:
             login(request, user)
+            request.session['last_activity'] = timezone.now().timestamp()
             messages.success(request, f'Welcome, {user.username}!')
             return redirect('home')
         else:
             messages.error(request, 'Invalid credentials')
+    
+    # Check for timeout
+    if request.GET.get('timeout') == '1':
+        messages.warning(request, 'Your session expired due to inactivity. Please log in again.')
     
     return render(request, 'sales/login.html')
 
@@ -86,6 +91,13 @@ def logout_view(request):
     logout(request)
     messages.info(request, 'You have been logged out')
     return redirect('login')
+
+@login_required
+def keep_alive(request):
+    """Endpoint to keep session alive when user clicks 'Stay Logged In'"""
+    request.session['last_activity'] = timezone.now().timestamp()
+    request.session.modified = True
+    return JsonResponse({'status': 'ok', 'message': 'Session extended'})
 
 
 @login_required
