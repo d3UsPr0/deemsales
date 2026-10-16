@@ -12,7 +12,8 @@ from openpyxl.utils import get_column_letter
 import json
 from django.db.models import Q
 from .models import MenuCategory, MenuItem, Waiter, Order
-
+from collections import defaultdict, OrderedDict
+OD = OrderedDict
 from functools import wraps
 from django.core.exceptions import PermissionDenied
 
@@ -114,7 +115,7 @@ def home_view(request):
     ).select_related('menu_item', 'waiter', 'created_by').order_by('-created_at')
     
     # Group orders by session_id and combine duplicate items
-    from collections import defaultdict, OrderedDict
+    # from collections import defaultdict, OrderedDict as OD
     from django.db.models import Sum
     
     grouped_orders = []
@@ -202,18 +203,93 @@ def home_view(request):
         else:
             open_count += 1
 
+        # ============================================================
+    # UNPAID ORDERS — all OPEN orders from any date
+    # ============================================================
+    unpaid_orders = Order.objects.filter(
+        status='open'
+    ).select_related('menu_item', 'waiter', 'created_by').order_by('-created_at')
+    
+    # Group unpaid orders by session_id
+    unpaid_groups = defaultdict(list)
+    for order in unpaid_orders:
+        session_key = order.session_id if order.session_id else f"single_{order.id}"
+        unpaid_groups[session_key].append(order)
+    
+    unpaid_grouped = []
+    unpaid_order_num = 1
+    
+    for session_key, orders in unpaid_groups.items():
+        combined_items = OD()
+        for order in orders:
+            item_key = order.menu_item.id
+            if item_key in combined_items:
+                combined_items[item_key]['quantity'] += order.quantity
+                combined_items[item_key]['total_price'] += float(order.total_price)
+                combined_items[item_key]['order_ids'].append(order.id)
+            else:
+                combined_items[item_key] = {
+                    'menu_item': order.menu_item,
+                    'quantity': order.quantity,
+                    'unit_price': float(order.unit_price),
+                    'total_price': float(order.total_price),
+                    'category': order.menu_item.category,
+                    'order_ids': [order.id],
+                }
+        
+        combined_list = list(combined_items.values())
+        first_order = orders[0]
+        
+        # Location display
+        if first_order.location_type == 'other':
+            location_display = first_order.location_detail or 'Other'
+        elif first_order.location_detail:
+            location_display = f"{first_order.get_location_type_display()} #{first_order.location_detail}"
+        else:
+            location_display = first_order.get_location_type_display()
+        
+        unpaid_grouped.append({
+            'order_number': unpaid_order_num,
+            'session_id': session_key,
+            'combined_items': combined_list,
+            'created_at': first_order.created_at,
+            'waiter': first_order.waiter,
+            'created_by': first_order.created_by,
+            'location_type': first_order.location_type,
+            'location_detail': first_order.location_detail,
+            'location_display': location_display,
+            'notes': first_order.notes if first_order.notes else '',
+            'total_quantity': sum(item['quantity'] for item in combined_list),
+            'total_amount': sum(item['total_price'] for item in combined_list),
+            'item_count': len(combined_list),
+            'is_group': len(orders) > 1 or len(combined_list) > 1,
+            'first_order_id': orders[-1].id,
+            'last_order_id': orders[0].id,
+            'days_old': (today - first_order.created_at.date()).days,
+        })
+        unpaid_order_num += 1
+    
+    # Sort unpaid by newest first
+    unpaid_grouped.sort(key=lambda x: x['created_at'], reverse=True)
+    for idx, g in enumerate(unpaid_grouped, 1):
+        g['order_number'] = idx
+    
+    unpaid_total = sum(g['total_amount'] for g in unpaid_grouped)
+    
     context = {
         'categories': categories,
         'menu_items': menu_items,
         'waiters': waiters,
         'grouped_orders': grouped_orders,
+        'unpaid_grouped': unpaid_grouped,
+        'unpaid_total': unpaid_total,
+        'unpaid_count': len(unpaid_grouped),
         'total_collection': total_collection,
         'today': today,
         'total_orders_count': today_orders.count(),
         'total_sessions': len(grouped_orders),
         'open_count': open_count,
         'closed_count': closed_count,
-        
         'user_role': get_user_role(request.user),
         'can_view_reports': can_view_reports(request.user),
         'can_manage_users': get_user_role(request.user) == 'admin',
