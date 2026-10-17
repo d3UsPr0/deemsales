@@ -22,39 +22,39 @@
   <!-- Stats Row -->
   <div class="card-body" style="padding: 10px 15px;">
     <div class="row text-center g-2">
-      <div class="col-md-3">
+      <div class="col">
         <div class="stat-card" style="background: rgba(84,11,2,0.08); color: var(--primary);">
           <i class="fas fa-users"></i>
-          <h6>Total Users</h6>
+          <h6>Total</h6>
           <h3>{{ total_users }}</h3>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="stat-card" style="background: rgba(40,167,69,0.1); color: #28a745;">
+      <div class="col">
+        <div class="stat-card" style="background: rgba(220,53,69,0.1); color: #dc3545;">
           <i class="fas fa-user-shield"></i>
-          <h6>Administrators</h6>
+          <h6>Admins</h6>
           <h3>{{ admin_count }}</h3>
         </div>
       </div>
-           <div class="col-md-3">
+      <div class="col">
         <div class="stat-card" style="background: rgba(247,148,29,0.1); color: var(--accent);">
           <i class="fas fa-user-tie"></i>
           <h6>Managers</h6>
           <h3>{{ manager_count }}</h3>
         </div>
       </div>
-      <div class="col-md-3">
+      <div class="col">
         <div class="stat-card" style="background: rgba(0,182,82,0.1); color: var(--secondary);">
           <i class="fas fa-cash-register"></i>
           <h6>Cashiers</h6>
           <h3>{{ cashier_count }}</h3>
         </div>
       </div>
-      <div class="col-md-3">
-        <div class="stat-card" style="background: rgba(0,182,82,0.1); color: var(--secondary);">
+      <div class="col">
+        <div class="stat-card" style="background: rgba(23,162,184,0.1); color: #17a2b8;">
           <i class="fas fa-user-check"></i>
-          <h6>Active Users</h6>
-          <h3>{{ active_count }}</h3>
+          <h6>Waiters</h6>
+          <h3>{{ waiter_count|default:"0" }}</h3>
         </div>
       </div>
     </div>
@@ -110,6 +110,10 @@
               {% elif item.profile.role == 'manager' %}
                 <span class="badge" style="background-color: var(--accent);">
                   <i class="fas fa-user-tie"></i> Manager
+                </span>
+              {% elif item.profile.role == 'waiter' %}
+                <span class="badge" style="background-color: #17a2b8;">
+                  <i class="fas fa-user-check"></i> Waiter
                 </span>
               {% else %}
                 <span class="badge" style="background-color: var(--secondary);">
@@ -226,9 +230,10 @@
             <div class="col-12">
               <label class="form-label">Role <span class="text-danger">*</span></label>
               <select class="form-select form-select-sm" name="role" required>
-                <option value="cashier">Cashier - Order sales & actions only</option>
-                <option value="manager">Manager - Cashier + Reports</option>
-                <option value="admin">Administrator - Full access + User Management</option>
+                <option value="cashier">Cashier</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Administrator</option>
+                <option value="waiter">Waiter</option>
               </select>
             </div>
           </div>
@@ -274,10 +279,11 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">Role</label>
-                <select class="form-select form-select-sm" name="role" id="editRole">
+              <select class="form-select form-select-sm" name="role" id="editRole">
                 <option value="cashier">Cashier</option>
                 <option value="manager">Manager</option>
                 <option value="admin">Administrator</option>
+                <option value="waiter">Waiter</option>
               </select>
             </div>
             <div class="col-md-6">

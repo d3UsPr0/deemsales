@@ -31,18 +31,8 @@ class MenuItem(models.Model):
         return f"{self.name} - {self.price} TZS"
 
 
-class Waiter(models.Model):
-    """Waiters with full name and display name"""
-    full_name = models.CharField(max_length=100)
-    display_name = models.CharField(max_length=50)
-    is_active = models.BooleanField(default=True)
-    
-    def __str__(self):
-        return self.display_name
-
-
 class Order(models.Model):
-    """Individual order entry"""
+    """Individual order entry — waiter is now a User with role='waiter'"""
     LOCATION_CHOICES = [
         ('table', 'Table'),
         ('takeaway', 'Takeaway'),
@@ -53,32 +43,49 @@ class Order(models.Model):
     quantity = models.IntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
-    waiter = models.ForeignKey(Waiter, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Waiter is now a User (with role='waiter') — null for non-waiter submitters who choose "Self"
+    waiter_user = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='orders_as_waiter',
+        help_text="The waiter serving this order (a User with role='waiter', or self)"
+    )
+    
     location_type = models.CharField(max_length=20, choices=LOCATION_CHOICES, default='table')
     location_detail = models.CharField(max_length=100, blank=True, null=True, help_text="Table number, takeaway number, or other location")
     notes = models.TextField(blank=True, null=True)
     status = models.CharField(max_length=10, choices=[('open', 'Open'), ('closed', 'Closed')], default='open')
     closed_at = models.DateTimeField(null=True, blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders_created')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    session_id = models.CharField(max_length=100, blank=True, null=True)  # To group orders submitted together
+    session_id = models.CharField(max_length=100, blank=True, null=True)
     
     class Meta:
         ordering = ['-created_at']
     
     def __str__(self):
-        location = self.get_location_display()
-        if self.location_detail:
-            location += f" ({self.location_detail})"
-        return f"{self.menu_item.name} x{self.quantity} - {self.waiter} - {location}"
+        location = self.get_full_location_display()
+        waiter_name = self.get_waiter_display_name()
+        return f"{self.menu_item.name} x{self.quantity} - {waiter_name} - {location}"
     
     def save(self, *args, **kwargs):
         if not self.total_price:
             self.total_price = self.unit_price * self.quantity
         super().save(*args, **kwargs)
     
-    def get_location_display(self):
+    def get_waiter_display_name(self):
+        """Get a friendly display name for the waiter"""
+        if self.waiter_user:
+            full_name = self.waiter_user.get_full_name()
+            return full_name if full_name else self.waiter_user.username
+        return "N/A"
+    
+    def get_full_location_display(self):
         """Get full location display"""
         if self.location_type == 'other':
             return self.location_detail or 'Other'
@@ -86,9 +93,6 @@ class Order(models.Model):
             return f"{self.get_location_type_display()} #{self.location_detail}"
         else:
             return self.get_location_type_display()
-        
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 
 
 class UserProfile(models.Model):
@@ -97,6 +101,7 @@ class UserProfile(models.Model):
         ('admin', 'Administrator'),
         ('manager', 'Manager'),
         ('cashier', 'Cashier'),
+        ('waiter', 'Waiter'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -108,7 +113,6 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} - {self.get_role_display()}"
     
-    # Helper properties
     @property
     def is_admin(self):
         return self.role == 'admin'
@@ -122,24 +126,42 @@ class UserProfile(models.Model):
         return self.role == 'cashier'
     
     @property
+    def is_waiter(self):
+        return self.role == 'waiter'
+    
+    @property
     def can_view_reports(self):
-        """Admin and Manager can view reports"""
         return self.role in ['admin', 'manager']
     
     @property
     def can_manage_users(self):
-        """Only Admin can manage users"""
         return self.role == 'admin'
+    
+    @property
+    def can_manage_menu(self):
+        return self.role in ['admin', 'manager']
+    
+    @property
+    def can_record_expenses(self):
+        return self.role in ['admin', 'manager', 'cashier']
+    
+    @property
+    def display_name(self):
+        """Friendly display name for this user"""
+        full_name = self.user.get_full_name()
+        return full_name if full_name else self.user.username
+
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """Auto-create profile when user is created"""
-    if created:
-        UserProfile.objects.get_or_create(user=instance)
-    else:
-        UserProfile.objects.get_or_create(user=instance)
-        
+    UserProfile.objects.get_or_create(user=instance)
+
+
 class Expense(models.Model):
     """Daily expense records"""
     CATEGORY_CHOICES = [
@@ -167,7 +189,8 @@ class Expense(models.Model):
     
     def __str__(self):
         return f"{self.get_category_display()} - {self.amount} TZS ({self.date})"
-    
+
+
 class AuditLog(models.Model):
     """Tracks UPDATE and DELETE actions on database rows"""
     ACTION_CHOICES = [
@@ -175,29 +198,17 @@ class AuditLog(models.Model):
         ('delete', 'Delete'),
     ]
     
-    MODEL_CHOICES = [
-        ('Order', 'Order'),
-        ('MenuItem', 'Menu Item'),
-        ('MenuCategory', 'Menu Category'),
-        ('Waiter', 'Waiter'),
-        ('Expense', 'Expense'),
-        ('User', 'User'),
-    ]
-    
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     model_name = models.CharField(max_length=50)
     object_id = models.CharField(max_length=50)
     object_repr = models.CharField(max_length=255, help_text="Human-readable name of the object")
     
-    # Snapshot before and after (for update) or just before (for delete)
     data_before = models.JSONField(null=True, blank=True)
     data_after = models.JSONField(null=True, blank=True)
     
-    # Who did it
     performed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='audit_logs')
     performed_at = models.DateTimeField(auto_now_add=True)
     
-    # Extra info
     notes = models.CharField(max_length=255, blank=True, null=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     

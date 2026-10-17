@@ -52,28 +52,41 @@
 
           <!-- Section 2: Waiter and Location -->
           <fieldset>
-            <legend><i class="fas fa-user-tie section-icon"></i> Section 2: Waiter & Location</legend>
+            <legend><i class="fas fa-user-tie section-icon"></i> Section 2: {% if is_waiter %}Location{% else %}Waiter & Location{% endif %}</legend>
             <div class="row g-2">
-              <!-- Waiter Selection -->
+              {% if not is_waiter %}
+              <!-- Waiter Selection: waiter-users + Self -->
               <div class="col-md-6">
                 <label class="form-label"><i class="fas fa-user-tie"></i> Select Waiter <span class="text-danger">*</span></label>
                 <div class="card">
                   <div class="card-body waiter-radio-group" style="padding: 8px 12px;">
-                    {% for waiter in waiters %}
+                    <!-- Self option first -->
                     <div class="form-check form-check-inline">
                       <input class="form-check-input waiter-radio" type="radio" 
-                             name="waiter" id="waiter_{{ waiter.id }}" value="{{ waiter.id }}" required>
-                      <label class="form-check-label" for="waiter_{{ waiter.id }}">
-                        {{ waiter.display_name }}
+                             name="waiter" id="waiter_self" value="self" checked required>
+                      <label class="form-check-label" for="waiter_self">
+                        <strong>Myself</strong> ({{ request.user.get_full_name|default:request.user.username }})
                       </label>
                     </div>
+                    <!-- Waiter users -->
+                    {% for w_user in waiters %}
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input waiter-radio" type="radio" 
+                             name="waiter" id="waiter_{{ w_user.id }}" value="{{ w_user.id }}">
+                      <label class="form-check-label" for="waiter_{{ w_user.id }}">
+  {{ w_user.first_name|default:w_user.username }}
+</label>
+                    </div>
+                    {% empty %}
+                    <small class="text-muted d-block">No waiter users yet. You can still submit as yourself.</small>
                     {% endfor %}
                   </div>
                 </div>
               </div>
+              {% endif %}
 
               <!-- Location Selection -->
-              <div class="col-md-6">
+              <div class="{% if is_waiter %}col-md-12{% else %}col-md-6{% endif %}">
                 <label class="form-label"><i class="fas fa-map-marker-alt"></i> Location <span class="text-danger">*</span></label>
                 <div class="card">
                   <div class="card-body" style="padding: 8px 12px;">
@@ -116,7 +129,6 @@
                       placeholder="Any additional information about this order..." style="font-size:13px;"></textarea>
           </fieldset>
 
-          <!-- Submit Button -->
           <button type="button" class="btn btn-primary btn-lg w-100 mt-2" data-bs-toggle="modal" data-bs-target="#confirmModal">
             <i class="fas fa-save"></i> Submit Order
           </button>
@@ -129,7 +141,6 @@
 <!-- Recent Orders - With Tabs -->
 <div class="card shadow mt-3">
   <div class="card-header" style="background-color: var(--primary); color: white; padding: 0;">
-    <!-- Tabs -->
     <ul class="nav nav-tabs" id="ordersTabs" role="tablist" style="border-bottom: none;">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="latest-tab" data-bs-toggle="tab" data-bs-target="#latest-orders" 
@@ -181,9 +192,9 @@
                     {% for item in group.combined_items %}
                     <span class="badge" style="background-color: var(--secondary); font-size:11.5px;">
                       {{ item.menu_item.name }}
-                      <span class="badge bg-light text-dark ms-1" style="font-size:10px;">
-                        {% if item.quantity > 1 %}×{{ item.quantity }}{% endif %}
-                      </span>
+                      {% if item.quantity > 1 %}
+                      <span class="badge bg-light text-dark ms-1" style="font-size:10px;">×{{ item.quantity }}</span>
+                      {% endif %}
                     </span>
                     {% endfor %}
                   </div>
@@ -196,7 +207,7 @@
                 <td class="text-center"><span class="badge bg-info">{{ group.item_count }}</span></td>
                 <td class="text-center"><strong>{{ group.total_quantity }}</strong></td>
                 <td><span class="fw-bold" style="color: var(--secondary);">{{ group.total_amount|floatformat:"0"|intcomma }}/=</span></td>
-                <td><span style="color: var(--primary);"><i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}</span></td>
+                <td><span style="color: var(--primary);"><i class="fas fa-user-tie"></i> {{ group.waiter_name }}</span></td>
                 <td>
                   {% if group.location_type == 'table' %}
                   <span class="badge" style="background-color: #17a2b8;"><i class="fas fa-chair"></i> Table{% if group.location_detail %}#{{ group.location_detail }}{% endif %}</span>
@@ -207,17 +218,17 @@
                   {% endif %}
                 </td>
                 <td class="text-center">
-                  {% if group.payment_status == 'closed' %}
-                  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}" 
-                          style="background-color: #28a745; color: white;" title="Click to reopen">CLOSED</button>
-                  {% elif group.payment_status == 'partial' %}
-                  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
-                          style="background-color: #ffc107; color: #000;" title="Click to close all">MIXED</button>
-                  {% else %}
-                  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
-                          style="background-color: #dc3545; color: white;" title="Click to close">OPEN</button>
-                  {% endif %}
-                </td>
+  {% if group.payment_status == 'closed' %}
+  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}" 
+          style="background-color: #28a745; color: white;" title="Click to mark as unpaid">PAID</button>
+  {% elif group.payment_status == 'partial' %}
+  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+          style="background-color: #ffc107; color: #000;" title="Click to mark all as paid">MIXED</button>
+  {% else %}
+  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+          style="background-color: #dc3545; color: white;" title="Click to mark as paid">UNPAID</button>
+  {% endif %}
+</td>
                 <td>
                   <small class="text-muted" style="font-size:11px;"><i class="fas fa-user-edit"></i> {{ group.created_by.username }}</small><br/>
                   <small class="text-muted" style="font-size:11px;">{{ group.created_at|time:"H:i" }}</small>
@@ -227,21 +238,8 @@
                     {% if group.item_count > 1 %}
                     <button class="btn btn-info btn-sm view-group" data-session-id="{{ group.session_id }}" title="View"><i class="fas fa-eye"></i></button>
                     {% endif %}
-                    {% if group.item_count == 1 %}
-                    <button class="btn btn-warning btn-sm edit-order" data-order-id="{{ group.first_order_id }}" title="Edit"><i class="fas fa-edit"></i></button>
-                    {% else %}
-                    <div class="btn-group btn-group-sm">
-                      <button class="btn btn-warning btn-sm dropdown-toggle" data-bs-toggle="dropdown" title="Edit"><i class="fas fa-edit"></i></button>
-                      <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;">
-                        {% for item in group.combined_items %}
-                        <li><a class="dropdown-item edit-order" href="#" data-order-id="{{ item.order_ids.0 }}" style="font-size:12px;"><i class="fas fa-edit"></i> {{ item.menu_item.name }}</a></li>
-                        {% endfor %}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item add-to-group" href="#" data-session-id="{{ group.session_id }}" style="font-size:12px;"><i class="fas fa-plus-circle text-success"></i> Add Items</a></li>
-                      </ul>
-                    </div>
-                    {% endif %}
-                    <button class="btn btn-success btn-sm add-to-group" data-session-id="{{ group.session_id }}" title="Add"><i class="fas fa-plus"></i></button>
+                    <button class="btn btn-warning btn-sm edit-order-group" data-session-id="{{ group.session_id }}" title="Edit Order"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-success btn-sm add-to-group" data-session-id="{{ group.session_id }}" title="Add Items"><i class="fas fa-plus"></i></button>
                     {% if group.is_group %}
                     <button class="btn btn-danger btn-sm delete-group" data-session-id="{{ group.session_id }}" title="Delete"><i class="fas fa-trash"></i></button>
                     {% else %}
@@ -257,7 +255,7 @@
                   <div class="d-flex justify-content-between align-items-center mb-2">
                     <strong style="font-size:12.5px;"><i class="fas fa-list"></i> Order #{{ group.order_number }} Breakdown:</strong>
                     <div style="font-size:12px;">
-                      <span class="me-3"><i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}</span>
+                      <span class="me-3"><i class="fas fa-user-tie"></i> {{ group.waiter_name }}</span>
                       <span><i class="fas fa-map-marker-alt"></i> {{ group.location_display }}</span>
                     </div>
                   </div>
@@ -305,7 +303,6 @@
     
     <!-- ============ TAB 2: UNPAID ORDERS ============ -->
     <div class="tab-pane fade" id="unpaid-orders">
-      <!-- Alert Banner -->
       {% if unpaid_count > 0 %}
       <div class="alert alert-warning m-2 d-flex align-items-center justify-content-between" style="font-size:13px;">
         <div>
@@ -346,9 +343,9 @@
                     {% for item in group.combined_items %}
                     <span class="badge" style="background-color: var(--secondary); font-size:11.5px;">
                       {{ item.menu_item.name }}
-                      <span class="badge bg-light text-dark ms-1" style="font-size:10px;">
-                        {% if item.quantity > 1 %}×{{ item.quantity }}{% endif %}
-                      </span>
+                      {% if item.quantity > 1 %}
+                      <span class="badge bg-light text-dark ms-1" style="font-size:10px;">×{{ item.quantity }}</span>
+                      {% endif %}
                     </span>
                     {% endfor %}
                   </div>
@@ -360,7 +357,7 @@
                 </td>
                 <td class="text-center"><strong>{{ group.total_quantity }}</strong></td>
                 <td><span class="fw-bold" style="color: #dc3545;">{{ group.total_amount|floatformat:"0"|intcomma }}/=</span></td>
-                <td><span style="color: var(--primary);"><i class="fas fa-user-tie"></i> {{ group.waiter.display_name|default:"N/A" }}</span></td>
+                <td><span style="color: var(--primary);"><i class="fas fa-user-tie"></i> {{ group.waiter_name }}</span></td>
                 <td>
                   {% if group.location_type == 'table' %}
                   <span class="badge" style="background-color: #17a2b8;"><i class="fas fa-chair"></i> Table{% if group.location_detail %}#{{ group.location_detail }}{% endif %}</span>
@@ -382,11 +379,11 @@
                   {% endif %}
                 </td>
                 <td class="text-center">
-                  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
-                          style="background-color: #dc3545; color: white;" title="Click to mark as paid/closed">
-                    <i class="fas fa-lock-open"></i> OPEN
-                  </button>
-                </td>
+  <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+          style="background-color: #dc3545; color: white;" title="Click to mark as paid">
+    <i class="fas fa-lock-open"></i> UNPAID
+  </button>
+</td>
                 <td>
                   <div class="btn-group btn-group-sm">
                     {% if group.item_count > 1 %}
@@ -444,6 +441,15 @@
 </div>
 
 <!-- Today's Summary Footer -->
+<div class="text-center mb-2" style="color: var(--primary);">
+  <strong>
+    {% if is_waiter %}
+      <i class="fas fa-user-tie"></i> {{ request.user.get_full_name|default:request.user.username }}'s Summary
+    {% else %}
+      <i class="fas fa-chart-bar"></i> Today's Summary
+    {% endif %}
+  </strong>
+</div>
 <div class="card shadow mt-3 mb-4" style="background: linear-gradient(135deg, var(--primary), #8b1a0a); color: white; border-radius: 8px;">
   <div class="card-body" style="padding: 12px 15px;">
     <div class="row text-center g-2">
@@ -462,19 +468,19 @@
         </div>
       </div>
       <div class="col-md-2">
-        <div class="stat-card" style="background: rgba(40,167,69,0.15);">
-          <i class="fas fa-lock" style="color: #28a745;"></i>
-          <h6>Closed</h6>
-          <h3 style="color: #28a745; font-size:1.4rem;">{{ closed_count|default:"0" }}</h3>
-        </div>
-      </div>
-      <div class="col-md-2">
-        <div class="stat-card" style="background: rgba(220,53,69,0.15);">
-          <i class="fas fa-lock-open" style="color: #dc3545;"></i>
-          <h6>Open</h6>
-          <h3 style="color: #dc3545; font-size:1.4rem;">{{ open_count|default:"0" }}</h3>
-        </div>
-      </div>
+  <div class="stat-card" style="background: rgba(40,167,69,0.15);">
+    <i class="fas fa-lock" style="color: #28a745;"></i>
+    <h6>Paid</h6>
+    <h3 style="color: #28a745; font-size:1.4rem;">{{ closed_count|default:"0" }}</h3>
+  </div>
+</div>
+<div class="col-md-2">
+  <div class="stat-card" style="background: rgba(220,53,69,0.15);">
+    <i class="fas fa-lock-open" style="color: #dc3545;"></i>
+    <h6>Unpaid</h6>
+    <h3 style="color: #dc3545; font-size:1.4rem;">{{ open_count|default:"0" }}</h3>
+  </div>
+</div>
       <div class="col-md-2">
         <div class="stat-card" style="background: rgba(255,255,255,0.05);">
           <i class="fas fa-users" style="color: var(--accent);"></i>
@@ -520,9 +526,32 @@
           </table>
         </div>
         <div class="row mt-2 g-2">
-          <div class="col-md-4"><div class="card border-success"><div class="card-body py-1 px-2"><small><i class="fas fa-user-tie"></i> <strong>Waiter:</strong></small><span id="summaryWaiter" class="ms-1 fw-bold" style="color:var(--primary);">-</span></div></div></div>
-          <div class="col-md-4"><div class="card border-info"><div class="card-body py-1 px-2"><small><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong></small><span id="summaryLocation" class="ms-1 fw-bold" style="color:var(--primary);">-</span></div></div></div>
-          <div class="col-md-4"><div class="card border-warning"><div class="card-body py-1 px-2"><small><i class="fas fa-sticky-note"></i> <strong>Notes:</strong></small><span id="summaryNotes" class="ms-1 text-muted fst-italic">-</span></div></div></div>
+          {% if not is_waiter %}
+          <div class="col-md-4">
+            <div class="card border-success">
+              <div class="card-body py-1 px-2">
+                <small><i class="fas fa-user-tie"></i> <strong>Waiter:</strong></small>
+                <span id="summaryWaiter" class="ms-1 fw-bold" style="color:var(--primary);">-</span>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+          <div class="col-md-{% if is_waiter %}6{% else %}4{% endif %}">
+            <div class="card border-info">
+              <div class="card-body py-1 px-2">
+                <small><i class="fas fa-map-marker-alt"></i> <strong>Location:</strong></small>
+                <span id="summaryLocation" class="ms-1 fw-bold" style="color:var(--primary);">-</span>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-{% if is_waiter %}6{% else %}4{% endif %}">
+            <div class="card border-warning">
+              <div class="card-body py-1 px-2">
+                <small><i class="fas fa-sticky-note"></i> <strong>Notes:</strong></small>
+                <span id="summaryNotes" class="ms-1 text-muted fst-italic">-</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div id="noItemsWarning" class="alert alert-warning mt-2" style="display:none;"><i class="fas fa-exclamation-triangle"></i> <strong>No items selected!</strong></div>
       </div>
@@ -546,33 +575,95 @@
   </div></div>
 </div>
 
-<!-- Edit Modal -->
-<div class="modal fade" id="editModal" tabindex="-1">
-  <div class="modal-dialog modal-lg"><div class="modal-content">
-    <div class="modal-header" style="background-color: var(--accent); color: white;"><h5 class="modal-title"><i class="fas fa-edit"></i> Edit Order</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body">
-      <form id="editOrderForm" method="post">{% csrf_token %}<input type="hidden" name="order_id" id="editOrderId"/>
-        <div class="row g-2">
-          <div class="col-md-6"><label class="form-label">Menu Item</label><select class="form-select form-select-sm" name="menu_item" id="editMenuItem">{% for item in menu_items %}<option value="{{ item.id }}">{{ item.name }} - {{ item.price }}/=</option>{% endfor %}</select></div>
-          <div class="col-md-3"><label class="form-label">Quantity</label><input type="number" class="form-control form-control-sm" name="quantity" id="editQuantity" min="1"/></div>
-          <div class="col-md-3"><label class="form-label">Waiter</label><select class="form-select form-select-sm" name="waiter" id="editWaiter"><option value="">-- Select --</option>{% for waiter in waiters %}<option value="{{ waiter.id }}">{{ waiter.display_name }}</option>{% endfor %}</select></div>
-        </div>
-        <div class="row g-2 mt-1">
-          <div class="col-md-6">
-            <label class="form-label"><i class="fas fa-map-marker-alt"></i> Location</label>
-            <div class="mb-1">
-              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_table" value="table"/><label class="form-check-label" for="edit_location_table">Table</label></div>
-              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_takeaway" value="takeaway"/><label class="form-check-label" for="edit_location_takeaway">Takeaway</label></div>
-              <div class="form-check form-check-inline"><input class="form-check-input edit-location-radio" type="radio" name="location_type" id="edit_location_other" value="other"/><label class="form-check-label" for="edit_location_other">Other</label></div>
-            </div>
-            <input type="text" class="form-control form-control-sm" name="location_detail" id="editLocationDetail" placeholder="Table number or location name"/>
+<!-- Edit Order Modal - Full Order Editor -->
+<div class="modal fade" id="editOrderGroupModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--accent); color: white;">
+        <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Order #<span id="editOrderNumber"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editOrderGroupForm" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="session_id" id="editSessionId">
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">
+              <i class="fas fa-utensils"></i> Order Items
+              <small class="text-muted">(edit quantity or remove items)</small>
+            </label>
+            <div id="editItemsContainer" class="border rounded p-2" style="background-color: #f8f9fa; min-height: 60px;"></div>
+            <small class="text-muted d-block mt-1" id="editItemsTotal"></small>
           </div>
-          <div class="col-md-6"><label class="form-label">Notes</label><textarea class="form-control form-control-sm" name="notes" id="editNotes" rows="2"></textarea></div>
-        </div>
-        <div class="text-end mt-2"><button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-save"></i> Update</button></div>
-      </form>
+
+          {% if not is_waiter %}
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-user-tie"></i> Waiter</label>
+            <div class="card">
+              <div class="card-body py-2" id="editWaiterRadios">
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input edit-waiter-radio" type="radio" 
+                         name="waiter" id="edit_waiter_self" value="self">
+                  <label class="form-check-label" for="edit_waiter_self">
+                    <strong>Myself</strong> ({{ request.user.get_full_name|default:request.user.username }})
+                  </label>
+                </div>
+                {% for w_user in waiters %}
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input edit-waiter-radio" type="radio" 
+                         name="waiter" id="edit_waiter_{{ w_user.id }}" value="{{ w_user.id }}">
+                  <label class="form-check-label" for="edit_waiter_{{ w_user.id }}">
+                    {{ w_user.get_full_name|default:w_user.username }}
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label fw-bold"><i class="fas fa-map-marker-alt"></i> Location</label>
+            <div class="card">
+              <div class="card-body py-2">
+                <div class="mb-2">
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input edit-location-radio" type="radio" 
+                           name="location_type" id="edit_loc_table" value="table">
+                    <label class="form-check-label" for="edit_loc_table"><i class="fas fa-chair"></i> Table</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input edit-location-radio" type="radio" 
+                           name="location_type" id="edit_loc_takeaway" value="takeaway">
+                    <label class="form-check-label" for="edit_loc_takeaway"><i class="fas fa-shopping-bag"></i> Takeaway</label>
+                  </div>
+                  <div class="form-check form-check-inline">
+                    <input class="form-check-input edit-location-radio" type="radio" 
+                           name="location_type" id="edit_loc_other" value="other">
+                    <label class="form-check-label" for="edit_loc_other"><i class="fas fa-ellipsis-h"></i> Other</label>
+                  </div>
+                </div>
+                <input type="text" class="form-control form-control-sm" name="location_detail" 
+                       id="editLocationDetail" placeholder="Table number or location name">
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label fw-bold"><i class="fas fa-sticky-note"></i> Notes</label>
+            <textarea class="form-control form-control-sm" name="notes" id="editOrderNotes" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="submit" form="editOrderGroupForm" class="btn btn-warning btn-sm">
+          <i class="fas fa-save"></i> Save Changes
+        </button>
+      </div>
     </div>
-  </div></div>
+  </div>
 </div>
 
 <!-- Add to Order Modal -->
@@ -645,6 +736,137 @@
 
 {% block extra_scripts %}
 <script>
+// ============ MARK AS PAID (global) ============
+function markAsPaid(sessionId) {
+    if (confirm('Mark this order as PAID and close it?\n\nThe order will move to the Latest Orders tab.')) {
+        $.ajax({
+            url: "/toggle-group-status/" + sessionId + "/",
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" },
+            success: function() { location.reload(); },
+            error: function() { alert("Error. Please try again."); }
+        });
+    }
+}
+
+// ============ FULL ORDER EDITOR (global) ============
+var currentEditItems = {};
+
+$(document).on('click', '.edit-order-group', function(e) {
+    e.preventDefault();
+    var sessionId = $(this).data('session-id');
+    
+    $.get('/order-group-full/' + sessionId + '/', function(data) {
+        currentEditItems = {};
+        data.items.forEach(function(item) {
+            currentEditItems[item.menu_item_id] = {
+                name: item.menu_item_name,
+                unit_price: item.unit_price,
+                quantity: item.quantity,
+                category: item.category,
+            };
+        });
+        
+        renderEditItems();
+        
+        // Set waiter radio
+        if (data.waiter_id) {
+            $('#edit_waiter_' + data.waiter_id).prop('checked', true);
+        } else {
+            $('#edit_waiter_self').prop('checked', true);
+        }
+        
+        // Set location
+        $('#edit_loc_' + data.location_type).prop('checked', true);
+        $('#editLocationDetail').val(data.location_detail);
+        
+        // Set notes
+        $('#editOrderNotes').val(data.notes);
+        
+        // Set session ID + form action
+        $('#editSessionId').val(sessionId);
+        $('#editOrderGroupForm').attr('action', '/update-order-group/' + sessionId + '/');
+        
+        $('#editOrderGroupModal').modal('show');
+    }).fail(function() {
+        alert('Error loading order details.');
+    });
+});
+
+function renderEditItems() {
+    var container = $('#editItemsContainer');
+    container.empty();
+    var total = 0, totalQty = 0, itemCount = 0;
+    
+    if (Object.keys(currentEditItems).length === 0) {
+        container.html('<div class="text-center text-muted py-2"><i class="fas fa-exclamation-triangle"></i> No items in order.</div>');
+        $('#editItemsTotal').text('');
+        return;
+    }
+    
+    Object.keys(currentEditItems).forEach(function(itemId) {
+        var item = currentEditItems[itemId];
+        var subtotal = item.unit_price * item.quantity;
+        total += subtotal;
+        totalQty += item.quantity;
+        itemCount++;
+        
+        var row = `
+            <div class="d-flex align-items-center gap-2 py-2 border-bottom" data-item-id="${itemId}">
+                <div class="flex-grow-1">
+                    <strong style="font-size:13px;">${item.name}</strong>
+                    <span class="badge ms-1" style="background-color: var(--accent); font-size:10px;">${item.category}</span>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <label class="small text-muted me-1" style="font-size:11px;">Qty:</label>
+                    <input type="number" class="form-control form-control-sm edit-item-qty" 
+                           style="width: 70px;" min="1" value="${item.quantity}" data-item-id="${itemId}">
+                </div>
+                <div class="text-end" style="min-width: 100px;">
+                    <span class="badge bg-secondary" style="font-size:11px;">${item.unit_price.toLocaleString()}/=</span>
+                    <br>
+                    <strong style="color: var(--secondary); font-size:12px;">${subtotal.toLocaleString()}/=</strong>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-edit-item" data-item-id="${itemId}" title="Remove">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        container.append(row);
+    });
+    
+    $('#editItemsTotal').html(`<strong>${itemCount} item type${itemCount !== 1 ? 's' : ''} • ${totalQty} total qty • ${total.toLocaleString()}/=</strong>`);
+    rebuildEditHiddenInputs();
+}
+
+function rebuildEditHiddenInputs() {
+    $('#editOrderGroupForm input[type="hidden"][name^="item_qty_"]').remove();
+    Object.keys(currentEditItems).forEach(function(itemId) {
+        var item = currentEditItems[itemId];
+        $('#editOrderGroupForm').append(`<input type="hidden" name="item_qty_${itemId}" value="${item.quantity}">`);
+    });
+}
+
+$(document).on('change', '.edit-item-qty', function() {
+    var itemId = $(this).data('item-id');
+    var newQty = parseInt($(this).val()) || 1;
+    if (newQty < 1) { newQty = 1; $(this).val(1); }
+    if (currentEditItems[itemId]) {
+        currentEditItems[itemId].quantity = newQty;
+        renderEditItems();
+    }
+});
+
+$(document).on('click', '.remove-edit-item', function() {
+    var itemId = $(this).data('item-id');
+    var item = currentEditItems[itemId];
+    if (confirm('Remove "' + item.name + '" from this order?')) {
+        delete currentEditItems[itemId];
+        renderEditItems();
+    }
+});
+
+// ============ MAIN INIT ============
 $(document).ready(function () {
     var savedPos = localStorage.getItem('scrollPos');
     if (savedPos) {
@@ -658,19 +880,24 @@ $(document).ready(function () {
             $('html, body').scrollTop($('.card-header:contains("Latest Orders")').offset().top - 80);
         }, 50);
     }
+    
     $(".menu-checkbox").change(function () {
         var itemId = $(this).data("item-id");
         $("#quantity_" + itemId).prop("disabled", !$(this).is(":checked"));
     });
+    
     $('.location-radio').change(function() {
         var lt = $(this).val();
         $('#locationDetailLabel').text(lt === 'other' ? 'Specify Location' : lt === 'table' ? 'Table Number' : 'Takeaway Number');
         $('#location_detail').attr('placeholder', lt === 'other' ? 'Enter location name' : 'Enter ' + lt + ' number (optional)');
     });
+    
     $(document).on('change', '.edit-location-radio', function() {
         var lt = $(this).val();
         $('#editLocationDetail').attr('placeholder', lt === 'other' ? 'Enter location name' : lt + ' number (optional)');
     });
+    
+    // Confirmation modal
     $("#confirmModal").on("show.bs.modal", function () {
         var summaryBody = $("#orderSummaryBody"); summaryBody.empty();
         var itemCount = 0, grandTotal = 0, hasItems = false;
@@ -686,17 +913,35 @@ $(document).ready(function () {
             summaryBody.append('<tr><td class="text-center">' + itemCount + '</td><td><strong>' + itemName + '</strong></td><td class="text-center"><span class="badge bg-primary">' + quantity + '</span></td><td class="text-end">' + unitPrice.toLocaleString() + ' /=</td><td class="text-end fw-bold" style="color:var(--secondary);">' + subtotal.toLocaleString() + ' /=</td><td><span class="badge" style="background-color:var(--accent);">' + categoryName + '</span></td></tr>');
         });
         $("#totalItems").text(itemCount); $("#grandTotal").text(grandTotal.toLocaleString() + " /=");
-        var waiterName = $('input[name="waiter"]:checked').closest('.form-check').find('.form-check-label').text().trim();
+        
+        var waiterName = '';
+        var $checkedWaiter = $('input[name="waiter"]:checked');
+        if ($checkedWaiter.length) {
+            if ($checkedWaiter.val() === 'self') {
+                waiterName = '{{ request.user.get_full_name|default:request.user.username }}';
+            } else {
+                waiterName = $checkedWaiter.closest('.form-check').find('.form-check-label').text().trim();
+            }
+        } else {
+            waiterName = '{{ request.user.get_full_name|default:request.user.username }}';
+        }
+        
         var locationType = $('input[name="location_type"]:checked').val();
         var locationDetail = $('#location_detail').val();
         var notes = $('textarea[name="notes"]').val() || "No notes";
         var locationDisplay = locationType === 'table' ? 'Table' + (locationDetail ? ' #' + locationDetail : '') : locationType === 'takeaway' ? 'Takeaway' + (locationDetail ? ' #' + locationDetail : '') : (locationDetail || 'Other');
-        $("#summaryWaiter").text(waiterName || "Not selected"); $("#summaryLocation").text(locationDisplay); $("#summaryNotes").text(notes);
+        $("#summaryWaiter").text(waiterName || "Not selected");
+        $("#summaryLocation").text(locationDisplay);
+        $("#summaryNotes").text(notes);
+        
         if (!hasItems) { $("#noItemsWarning").show(); $("#confirmSubmit").prop("disabled", true); }
         else { $("#noItemsWarning").hide(); $("#confirmSubmit").prop("disabled", false); }
     });
+    
     $("#confirmSubmit").click(function () { localStorage.setItem('scrollToOrders', 'true'); $("#orderForm").submit(); });
+    
     $(document).on("click", ".view-group", function () { $("#details-" + $(this).data("session-id")).toggle(); });
+    
     $(document).on("click", ".delete-group", function () {
         if (confirm("Delete this entire order? This cannot be undone!")) {
             localStorage.setItem('scrollPos', $(window).scrollTop());
@@ -716,17 +961,7 @@ $(document).ready(function () {
             form.submit();
         }
     });
-    $(document).on("click", ".edit-order", function (e) {
-        e.preventDefault(); var orderId = $(this).data("order-id");
-        $.get("/edit-order/" + orderId + "/", function (data) {
-            $("#editOrderId").val(data.id); $("#editMenuItem").val(data.menu_item_id);
-            $("#editQuantity").val(data.quantity); $("#editWaiter").val(data.waiter_id); $("#editNotes").val(data.notes);
-            $('input[name="location_type"][value="' + data.location_type + '"]').prop('checked', true);
-            $('#editLocationDetail').val(data.location_detail);
-            $("#editOrderForm").attr("action", "/update-order/" + orderId + "/"); $("#editModal").modal("show");
-        });
-    });
-    $(document).on("submit", "#editOrderForm", function() { localStorage.setItem('scrollPos', $(window).scrollTop()); });
+    
     $(document).on("click", ".add-to-group", function(e) {
         e.preventDefault(); var sessionId = $(this).data("session-id");
         $.get("/order-group-info/" + sessionId + "/", function(data) {
@@ -742,30 +977,15 @@ $(document).ready(function () {
             $("#addToOrderForm").attr('action', '/add-to-order/' + sessionId + '/'); $("#addToOrderModal").modal('show');
         });
     });
+    
     $(document).on("submit", "#addToOrderForm", function() { localStorage.setItem('scrollPos', $(window).scrollTop()); });
+    $(document).on("submit", "#editOrderGroupForm", function() { localStorage.setItem('scrollPos', $(window).scrollTop()); });
     $(document).on("change", ".add-menu-checkbox", function() { $("#add_quantity_" + $(this).data('item-id')).prop('disabled', !$(this).is(':checked')); });
+    
     $(document).on("click", ".toggle-group-status", function (e) {
         e.preventDefault(); var sessionId = $(this).data("session-id");
         $.ajax({ url: "/toggle-group-status/" + sessionId + "/", method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}" }, success: function() { location.reload(); } });
     });
 });
-    // Mark as Paid & Close
-    function markAsPaid(sessionId) {
-        if (confirm('Mark this order as PAID and close it?\n\nThe order will move to the Latest Orders tab.')) {
-            $.ajax({
-                url: "/toggle-group-status/" + sessionId + "/",
-                method: "POST",
-                headers: {
-                    "X-CSRFToken": "{{ csrf_token }}"
-                },
-                success: function() {
-                    location.reload();
-                },
-                error: function() {
-                    alert("Error. Please try again.");
-                }
-            });
-        }
-    }
 </script>
 {% endblock %}

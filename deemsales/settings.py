@@ -7,7 +7,8 @@ SECRET_KEY = 'django-insecure-your-secret-key-here-change-in-production'
 
 DEBUG = True
 
-ALLOWED_HOSTS = ['sales.deemrestaurant.co.tz', 'localhost', '127.0.0.1']
+# ALLOWED_HOSTS = ['sales.deemrestaurant.co.tz', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']  # Allow all hosts for development; change in production
 
 INSTALLED_APPS = [
     'django.contrib.admin',

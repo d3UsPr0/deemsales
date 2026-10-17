@@ -97,17 +97,23 @@
         
         .menu-item-row:last-child { border-bottom: none; }
         
-        .menu-item-row .form-check {
+                .menu-item-row .form-check {
             margin: 0;
             flex: 1;
             min-width: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding-left: 0;
         }
         
         .menu-item-row .form-check-input {
-            margin-top: 0;
+            margin: 0;
             width: 15px;
             height: 15px;
             flex-shrink: 0;
+            position: static;
+            float: none;
         }
         
         .menu-item-row .form-check-label {
@@ -117,8 +123,9 @@
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 120px;
-            display: inline-block;
-            vertical-align: middle;
+            margin: 0;
+            line-height: 1.4;
+            padding: 0;
         }
         
         .menu-item-price {
@@ -343,6 +350,25 @@
             background-color: rgba(255,255,255,0.1) !important;
         }
 
+                /* ===== EDIT ORDER ITEMS ===== */
+        #editItemsContainer .edit-item-qty {
+            font-size: 13px;
+            text-align: center;
+            padding: 4px 6px;
+        }
+        
+        #editItemsContainer .remove-edit-item {
+            padding: 2px 8px;
+            font-size: 12px;
+        }
+        
+        .edit-waiter-radio,
+        .edit-location-radio {
+            width: 15px;
+            height: 15px;
+            margin-top: 2px;
+        }
+
         
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
@@ -359,7 +385,7 @@
                 <i class="fas fa-utensils"></i> DEEM <span>Sales</span>
             </a>
             <div class="d-flex align-items-center">
-                {% if user.is_authenticated %}
+                                {% if user.is_authenticated %}
                     <span class="text-white me-3" style="font-size:13px;">
                         <i class="fas fa-user"></i> {{ user.first_name|default:user.username }}
                         {% if user.profile.role == 'admin' %}
@@ -368,9 +394,19 @@
                             <span class="badge" style="background-color: var(--accent); font-size:10px;">Manager</span>
                         {% elif user.profile.role == 'cashier' %}
                             <span class="badge" style="background-color: var(--secondary); font-size:10px;">Cashier</span>
+                        {% elif user.profile.role == 'waiter' %}
+                            <span class="badge" style="background-color: #17a2b8; font-size:10px;">Waiter</span>
                         {% endif %}
                     </span>
                     
+                    <!-- Expenses (hidden for waiters) -->
+                    {% if user.profile.role != 'waiter' %}
+                    <a href="{% url 'expenses_view' %}" class="btn btn-sm btn-warning me-2" style="font-size:12px; color: white;">
+                        <i class="fas fa-money-bill-wave"></i> Expenses
+                    </a>
+                    {% endif %}
+                    
+                    <!-- Reports (Admin + Manager only) -->
                     {% if user.profile.role == 'admin' or user.profile.role == 'manager' %}
                     <div class="dropdown me-2">
                         <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" style="font-size:12px;">
@@ -395,13 +431,10 @@
                             <li><a class="dropdown-item" href="{% url 'audit_log' %}"><i class="fas fa-history"></i> Audit Log</a></li>
                             <li><a class="dropdown-item" href="/admin/" target="_blank"><i class="fas fa-cog"></i> Django Admin</a></li>
                             {% endif %}
-
                         </ul>
                     </div>
                     {% endif %}
-                    <a href="{% url 'expenses_view' %}" class="btn btn-sm btn-warning me-2" style="font-size:12px; color: white;">
-                        <i class="fas fa-money-bill-wave"></i> Expenses
-                    </a>
+                    
                     <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-light" style="font-size:12px;">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
