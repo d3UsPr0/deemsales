@@ -69,6 +69,7 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     session_id = models.CharField(max_length=100, blank=True, null=True)
+    group_id = models.IntegerField(null=True, blank=True, db_index=True, help_text="Stable reference for the order group")
     
     class Meta:
         ordering = ['-created_at']

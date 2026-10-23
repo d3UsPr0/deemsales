@@ -37,9 +37,13 @@
                           </label>
                         </div>
                         <span class="menu-item-price">{{ item.price|floatformat:"0"|intcomma }}/=</span>
-                        <input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}"
-                               class="form-control form-control-sm quantity-input"
-                               value="1" min="1" disabled/>
+                        <div class="qty-control">
+    <button type="button" class="qty-minus" data-target="quantity_{{ item.id }}" tabindex="-1">−</button>
+    <input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}"
+           class="quantity-input-native"
+           value="1" min="1" disabled/>
+    <button type="button" class="qty-plus" data-target="quantity_{{ item.id }}" tabindex="-1">+</button>
+</div>
                       </div>
                       {% endif %}
                     {% endfor %}
@@ -449,7 +453,12 @@
                   <label for="add_item_{{ item.id }}" class="form-check-label" title="{{ item.name }}">{{ item.name }}</label>
                 </div>
                 <span class="menu-item-price">{{ item.price }}/=</span>
-                <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}" class="form-control form-control-sm quantity-input" value="1" min="1" disabled/>
+                <div class="qty-control">
+    <button type="button" class="qty-minus" data-target="add_quantity_{{ item.id }}" tabindex="-1">−</button>
+    <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}"
+           class="quantity-input-native" value="1" min="1" disabled/>
+    <button type="button" class="qty-plus" data-target="add_quantity_{{ item.id }}" tabindex="-1">+</button>
+</div>
               </div>
               {% endif %}{% endfor %}
             </div></div></div>
@@ -460,6 +469,52 @@
       </form>
     </div>
   </div></div>
+</div>
+
+<!-- Breakdown Edit Quantity Modal -->
+<div class="modal fade" id="breakdownQtyModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background-color: var(--accent); color: white;">
+        <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Quantity</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="bq_session_id">
+        <input type="hidden" id="bq_item_id">
+        
+        <div class="mb-2" style="font-size:13px;">
+          <strong id="bq_item_name" style="color: var(--primary);"></strong>
+        </div>
+        
+        <label class="form-label fw-bold" style="font-size:12px;">Quantity</label>
+        <div class="d-flex align-items-center gap-2">
+          <div class="qty-control">
+            <button type="button" id="bq_minus" tabindex="-1">−</button>
+            <input type="number" id="bq_qty" style="width: 50px;" min="0" value="1">
+            <button type="button" id="bq_plus" tabindex="-1">+</button>
+          </div>
+          <span style="font-size:12px;">× <span id="bq_unit_price">0</span>/=</span>
+        </div>
+        
+        <div class="mt-2" style="font-size:12px;">
+          <strong>Subtotal: </strong>
+          <span id="bq_subtotal" style="color: var(--secondary); font-weight:700;">0/=</span>
+        </div>
+        
+        <div class="alert alert-warning mt-2 mb-0" style="font-size:11px; padding:6px 10px;">
+  <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+  Set quantity to &nbsp;<strong>0</strong>&nbsp; to remove this item.
+</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning btn-sm" id="bq_save">
+          <i class="fas fa-save"></i> Save
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Export Custom Range Modal -->
@@ -567,27 +622,44 @@ function renderEditItems() {
         totalQty += item.quantity;
         itemCount++;
         
-        var row = `
-            <div class="d-flex align-items-center gap-2 py-2 border-bottom" data-item-id="${itemId}">
-                <div class="flex-grow-1">
-                    <strong style="font-size:13px;">${item.name}</strong>
-                    <span class="badge ms-1" style="background-color: var(--accent); font-size:10px;">${item.category}</span>
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                    <label class="small text-muted me-1" style="font-size:11px;">Qty:</label>
-                    <input type="number" class="form-control form-control-sm edit-item-qty" 
-                           style="width: 70px;" min="1" value="${item.quantity}" data-item-id="${itemId}">
-                </div>
-                <div class="text-end" style="min-width: 100px;">
-                    <span class="badge bg-secondary" style="font-size:11px;">${item.unit_price.toLocaleString()}/=</span>
-                    <br>
-                    <strong style="color: var(--secondary); font-size:12px;">${subtotal.toLocaleString()}/=</strong>
-                </div>
-                <button type="button" class="btn btn-sm btn-outline-danger remove-edit-item" data-item-id="${itemId}" title="Remove">
-                    <i class="fas fa-times"></i>
-                </button>
+var row = `
+    <div class="d-flex align-items-center gap-2 py-2 border-bottom edit-item-row" data-item-id="${itemId}" 
+         style="flex-wrap: nowrap;">
+        <div class="flex-grow-1" style="min-width: 0; overflow: hidden;">
+            <strong style="font-size:13px; display: block; overflow: hidden; 
+                           text-overflow: ellipsis; white-space: nowrap;" 
+                    title="${item.name}">
+                ${item.name}
+            </strong>
+            <span class="badge ms-1" style="background-color: var(--accent); font-size:10px;">
+                ${item.category}
+            </span>
+        </div>
+        <div class="d-flex align-items-center" style="flex-shrink: 0;">
+            <div class="qty-control">
+                <button type="button" class="edit-qty-minus" data-item-id="${itemId}" tabindex="-1">−</button>
+                <input type="number" class="edit-item-qty" 
+                       style="width: 40px;" min="1" value="${item.quantity}" 
+                       data-item-id="${itemId}">
+                <button type="button" class="edit-qty-plus" data-item-id="${itemId}" tabindex="-1">+</button>
             </div>
-        `;
+        </div>
+        <div class="text-end" style="min-width: 80px; flex-shrink: 0;">
+            <span class="badge bg-secondary" style="font-size:11px;">
+                ${item.unit_price.toLocaleString()}/=
+            </span>
+            <br>
+            <strong style="color: var(--secondary); font-size:12px;">
+                ${subtotal.toLocaleString()}/=
+            </strong>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-danger remove-edit-item" 
+                data-item-id="${itemId}" title="Remove item" 
+                style="flex-shrink: 0; padding: 2px 6px;">
+            <i class="fas fa-times" style="font-size: 11px;"></i>
+        </button>
+    </div>
+`;
         container.append(row);
     });
     
@@ -638,9 +710,22 @@ $(document).ready(function () {
     }
     
     $(".menu-checkbox").change(function () {
-        var itemId = $(this).data("item-id");
-        $("#quantity_" + itemId).prop("disabled", !$(this).is(":checked"));
-    });
+    var itemId = $(this).data("item-id");
+    var $input = $("#quantity_" + itemId);
+    var $controls = $input.closest('.qty-control');
+    
+    $input.prop("disabled", !$(this).is(":checked"));
+    $controls.toggleClass('disabled', !$(this).is(":checked"));
+});
+
+$(document).on("change", ".add-menu-checkbox", function () {
+    var itemId = $(this).data("item-id");
+    var $input = $("#add_quantity_" + itemId);
+    var $controls = $input.closest('.qty-control');
+    
+    $input.prop("disabled", !$(this).is(":checked"));
+    $controls.toggleClass('disabled', !$(this).is(":checked"));
+});
     
     $('.location-radio').change(function() {
         var lt = $(this).val();
@@ -789,6 +874,117 @@ $(document).on('click', '.ajax-page', function(e) {
     }).fail(function() {
         alert('Failed to load page. Please try again.');
         $link.closest('.pagination').css('opacity', '1').css('pointer-events', 'auto');
+    });
+});
+
+$(document).on('click', '.qty-minus', function() {
+    var targetId = $(this).data('target');
+    var $input = $('#' + targetId);
+    if ($input.prop('disabled')) return;
+    var val = parseInt($input.val()) || 1;
+    if (val > 1) {
+        $input.val(val - 1);
+    }
+});
+
+$(document).on('click', '.qty-plus', function() {
+    var targetId = $(this).data('target');
+    var $input = $('#' + targetId);
+    if ($input.prop('disabled')) return;
+    var val = parseInt($input.val()) || 1;
+    $input.val(val + 1);
+});
+
+// Edit modal quantity +/- buttons
+$(document).on('click', '.edit-qty-minus', function() {
+    var itemId = $(this).data('item-id');
+    var $input = $(this).siblings('.edit-item-qty');
+    var val = parseInt($input.val()) || 1;
+    if (val > 1) {
+        $input.val(val - 1).trigger('change');
+    }
+});
+
+$(document).on('click', '.edit-qty-plus', function() {
+    var itemId = $(this).data('item-id');
+    var $input = $(this).siblings('.edit-item-qty');
+    var val = parseInt($input.val()) || 1;
+    $input.val(val + 1).trigger('change');
+});
+
+// ============ BREAKDOWN EDIT QUANTITY ============
+var bqUnitPrice = 0;
+
+$(document).on('click', '.breakdown-edit-btn', function(e) {
+    e.preventDefault();
+    
+    var sessionId = $(this).data('session-id');
+    var itemId = $(this).data('item-id');
+    var itemName = $(this).data('item-name');
+    var unitPrice = parseFloat($(this).data('unit-price')) || 0;
+    var currentQty = parseInt($(this).data('current-qty')) || 1;
+    
+    bqUnitPrice = unitPrice;
+    
+    $('#bq_session_id').val(sessionId);
+    $('#bq_item_id').val(itemId);
+    $('#bq_item_name').text(itemName);
+    $('#bq_unit_price').text(unitPrice.toLocaleString());
+    $('#bq_qty').val(currentQty);
+    
+    updateBqSubtotal();
+    $('#breakdownQtyModal').modal('show');
+});
+
+function updateBqSubtotal() {
+    var qty = parseInt($('#bq_qty').val()) || 0;
+    var subtotal = qty * bqUnitPrice;
+    $('#bq_subtotal').text(subtotal.toLocaleString() + '/=');
+}
+
+$('#bq_minus').click(function() {
+    var qty = parseInt($('#bq_qty').val()) || 0;
+    if (qty > 0) {
+        $('#bq_qty').val(qty - 1);
+        updateBqSubtotal();
+    }
+});
+
+$('#bq_plus').click(function() {
+    var qty = parseInt($('#bq_qty').val()) || 0;
+    $('#bq_qty').val(qty + 1);
+    updateBqSubtotal();
+});
+
+$('#bq_qty').on('input', function() {
+    updateBqSubtotal();
+});
+
+$('#bq_save').click(function() {
+    var sessionId = $('#bq_session_id').val();
+    var itemId = $('#bq_item_id').val();
+    var newQty = parseInt($('#bq_qty').val()) || 0;
+    
+    var $btn = $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+    
+    $.ajax({
+        url: '/quick-edit-qty/',
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        data: { session_id: sessionId, item_id: itemId, new_qty: newQty },
+        success: function(data) {
+            if (data.success) {
+                $('#breakdownQtyModal').modal('hide');
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown'));
+                $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+            }
+        },
+        error: function(xhr) {
+            alert('Error: ' + (xhr.responseJSON?.error || 'Unknown'));
+            $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+        }
     });
 });
 </script>

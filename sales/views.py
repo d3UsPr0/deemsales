@@ -209,7 +209,7 @@ def home_view(request):
             'total_amount': sum(i['total_price'] for i in combined_list),
             'item_count': len(combined_list),
             'is_group': len(orders) > 1 or len(combined_list) > 1,
-            'first_order_id': orders[-1].id,
+            'first_order_id': orders[-1].group_id or orders[-1].id,
             'last_order_id': orders[0].id,
             'payment_status': payment_status,
         })
@@ -283,7 +283,7 @@ def home_view(request):
             'total_amount': sum(i['total_price'] for i in combined_list),
             'item_count': len(combined_list),
             'is_group': len(orders) > 1 or len(combined_list) > 1,
-            'first_order_id': orders[-1].id,
+            'first_order_id': orders[-1].group_id or orders[-1].id,
             'last_order_id': orders[0].id,
             'days_old': (today - first.created_at.date()).days,
         })
@@ -383,6 +383,7 @@ def submit_orders(request):
                 
                 menu_items = MenuItem.objects.filter(is_available=True)
                 orders_created = 0
+                first_order_id = None
                 
                 for item in menu_items:
                     is_checked = request.POST.get(f'item_{item.id}')
@@ -393,7 +394,7 @@ def submit_orders(request):
                         
                         if quantity > 0:
                             for _ in range(quantity):
-                                Order.objects.create(
+                                order = Order.objects.create(
                                     menu_item=item,
                                     quantity=1,
                                     unit_price=item.price,
@@ -402,10 +403,14 @@ def submit_orders(request):
                                     location_type=location_type,
                                     location_detail=location_detail if location_detail else None,
                                     notes=notes,
-                                    reference=reference,
                                     created_by=request.user,
                                     session_id=session_id
                                 )
+                                # Set group_id — first order of the group becomes the stable reference
+                                if first_order_id is None:
+                                    first_order_id = order.id
+                                order.group_id = first_order_id
+                                order.save(update_fields=['group_id'])
                                 orders_created += 1
                 
                 if orders_created > 0:
@@ -492,6 +497,41 @@ def update_order(request, order_id):
     
     return redirect('home')
 
+@login_required
+def quick_edit_qty(request):
+    """Change quantity of one item — or remove it if qty=0"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        session_id = request.POST.get('session_id')
+        item_id = int(request.POST.get('item_id'))
+        new_qty = int(request.POST.get('new_qty', 1))
+        
+        orders = Order.objects.filter(session_id=session_id, menu_item_id=item_id)
+        
+        if not orders.exists():
+            return JsonResponse({'error': 'Item not found'}, status=404)
+        
+        if new_qty <= 0:
+            orders.delete()
+            remaining = Order.objects.filter(session_id=session_id)
+            if not remaining.exists():
+                return JsonResponse({'success': True, 'message': 'Item removed. Order is now empty.'})
+            return JsonResponse({'success': True, 'message': 'Item removed'})
+        
+        first = orders.first()
+        first.quantity = new_qty
+        first.total_price = first.unit_price * new_qty
+        first.save()
+        
+        for extra in orders[1:]:
+            extra.delete()
+        
+        return JsonResponse({'success': True, 'message': f'Quantity updated to {new_qty}'})
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def delete_order(request, order_id):
@@ -629,6 +669,8 @@ def add_to_order(request, session_id):
                                 for extra in existing_by_item[item.id][1:]:
                                     extra.delete()
                             else:
+                                # NEW item: create individual rows
+                                group_id = existing_order.group_id or existing_order.id
                                 for _ in range(quantity):
                                     Order.objects.create(
                                         menu_item=item,
@@ -641,7 +683,8 @@ def add_to_order(request, session_id):
                                         notes=existing_order.notes,
                                         status=existing_order.status,
                                         created_by=request.user,
-                                        session_id=session_id
+                                        session_id=session_id,
+                                        group_id=group_id
                                     )
                             items_added += quantity
                 
@@ -949,7 +992,6 @@ def export_excel(request):
         session_groups[session_key].append(order)
     
     row = 4
-    order_num = 1
     grand_total = 0
     
     for session_key, group_orders in session_groups.items():
@@ -974,7 +1016,8 @@ def export_excel(request):
         location = first_order.get_full_location_display()
         waiter_name = first_order.get_waiter_display_name()
         
-        ws.cell(row=row, column=1, value=f"#{order_num}").border = border
+        first_order = group_orders[0]
+        ws.cell(row=row, column=1, value=f"#{first_order.group_id or first_order.id}").border = border
         ws.cell(row=row, column=2, value=menu_items_str).border = border
         ws.cell(row=row, column=3, value=len(combined)).border = border
         ws.cell(row=row, column=4, value=total_qty).border = border
@@ -998,7 +1041,6 @@ def export_excel(request):
         status_cell.font = Font(color="9c6500")
         
         row += 1
-        order_num += 1
     
     # Orders summary
     summary_row = row

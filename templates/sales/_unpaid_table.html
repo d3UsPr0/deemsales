@@ -18,7 +18,7 @@
     {% for group in unpaid_grouped %}
     <tr class="{% if group.days_old >= 1 %}table-warning{% endif %}">
       <td class="text-center">
-        <span class="badge" style="background-color: var(--primary);">{{ group.reference }}</span>
+        <span class="badge" style="background-color: var(--primary);">#{{ group.first_order_id }}</span>
       </td>
       <td>
         <div class="d-flex flex-wrap gap-1">

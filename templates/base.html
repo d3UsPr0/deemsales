@@ -380,7 +380,97 @@
     padding: 4px 8px;
 }
 
+/* ===== CUSTOM QUANTITY CONTROLS ===== */
+.qty-control {
+    display: inline-flex;
+    align-items: center;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: white;
+    height: 28px;
+}
 
+.qty-control button {
+    width: 26px;
+    height: 100%;
+    border: none;
+    background: #f8f9fa;
+    color: var(--primary);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.qty-control button:hover {
+    background: #e9ecef;
+}
+
+.qty-control button:active {
+    background: var(--accent);
+    color: white;
+}
+
+.qty-control input {
+    width: 42px;
+    height: 100%;
+    border: none;
+    border-left: 1.5px solid #e0e0e0;
+    border-right: 1.5px solid #e0e0e0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0;
+    background: white;
+    -moz-appearance: textfield;
+}
+
+.qty-control input::-webkit-outer-spin-button,
+.qty-control input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.qty-control input:focus {
+    outline: none;
+}
+
+/* Disabled state — grey out buttons when checkbox unchecked */
+.qty-control.disabled {
+    opacity: 0.5;
+}
+
+.qty-control.disabled button {
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Edit modal qty control — slightly smaller */
+.qty-control .edit-item-qty {
+    width: 40px;
+    padding: 0;
+}
+
+.modal-header {
+    cursor: move;
+    user-select: none;
+}
+
+.modal-header:active {
+    cursor: grabbing;
+}
+
+/* Smooth reset when modal closes */
+.modal-dialog {
+    transition: transform 0.15s ease-out;
+}
         
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
@@ -630,13 +720,11 @@
         font-size: 13px;
     }
     
-    /* Hide some table columns on very small screens for clarity */
-    .table th:nth-child(3),  /* Uniq */
-    .table td:nth-child(3),
-    .table th:nth-child(4),  /* Qty */
-    .table td:nth-child(4),
-    .table th:nth-child(9),  /* By */
-    .table td:nth-child(9) {
+        /* Only hide columns in the main orders table, not in breakdown tables */
+    .table:not(.table-sm) th:nth-child(3),
+    .table:not(.table-sm) td:nth-child(3),
+    .table:not(.table-sm) th:nth-child(9),
+    .table:not(.table-sm) td:nth-child(9) {
         display: none;
     }
     
@@ -923,5 +1011,86 @@
         {% endif %}
     })();
     </script>
+
+    <script>
+// ============================================================
+// MODAL DRAG — allow users to drag modals by their header
+// ============================================================
+$(document).ready(function() {
+    // Apply drag to all modals by default
+    $(document).on('shown.bs.modal', '.modal', function() {
+        var $modal = $(this);
+        var $dialog = $modal.find('.modal-dialog');
+        var $header = $modal.find('.modal-header');
+        
+        // Skip if already draggable
+        if ($dialog.data('draggable')) return;
+        $dialog.data('draggable', true);
+        
+        // Make dialog draggable via header
+        $header.css('cursor', 'move');
+        
+        var isDragging = false;
+        var startX, startY, origX, origY;
+        
+        $header.on('mousedown touchstart', function(e) {
+            // Don't drag if clicking a button (close, etc.)
+            if ($(e.target).closest('button, a, input, select, textarea').length) return;
+            
+            isDragging = true;
+            
+            var clientX = e.type === 'touchstart' ? e.originalEvent.touches[0].clientX : e.clientX;
+            var clientY = e.type === 'touchstart' ? e.originalEvent.touches[0].clientY : e.clientY;
+            
+            startX = clientX;
+            startY = clientY;
+            
+            var transform = $dialog.css('transform');
+            if (transform && transform !== 'none') {
+                var matrix = transform.match(/matrix.*\((.+)\)/);
+                if (matrix) {
+                    var values = matrix[1].split(', ');
+                    origX = parseFloat(values[4]) || 0;
+                    origY = parseFloat(values[5]) || 0;
+                } else {
+                    origX = 0;
+                    origY = 0;
+                }
+            } else {
+                origX = 0;
+                origY = 0;
+            }
+            
+            $dialog.css('transition', 'none');
+            e.preventDefault();
+        });
+        
+        $(document).on('mousemove touchmove', function(e) {
+            if (!isDragging) return;
+            
+            var clientX = e.type === 'touchmove' ? e.originalEvent.touches[0].clientX : e.clientX;
+            var clientY = e.type === 'touchmove' ? e.originalEvent.touches[0].clientY : e.clientY;
+            
+            var dx = clientX - startX;
+            var dy = clientY - startY;
+            
+            $dialog.css('transform', 'translate(' + (origX + dx) + 'px, ' + (origY + dy) + 'px)');
+        });
+        
+        $(document).on('mouseup touchend', function() {
+            if (isDragging) {
+                isDragging = false;
+                $dialog.css('transition', '');
+            }
+        });
+    });
+    
+    // Reset position when modal closes
+    $(document).on('hidden.bs.modal', '.modal', function() {
+        var $dialog = $(this).find('.modal-dialog');
+        $dialog.css('transform', '').data('draggable', false);
+    });
+});
+</script>
 </body>
 </html>

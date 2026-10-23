@@ -59,4 +59,7 @@ urlpatterns = [
     
     # Get orders page (for pagination)
     path('orders-page/', views.get_orders_page, name='get_orders_page'),
+    
+    #Quick Edit Quantity Breakdown
+    path('quick-edit-qty/', views.quick_edit_qty, name='quick_edit_qty'),
 ]

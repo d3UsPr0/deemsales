@@ -19,7 +19,7 @@
     {% for group in grouped_orders %}
     <tr>
       <td class="text-center">
-        <span class="badge" style="background-color: var(--primary);">{{ group.reference }}</span>
+        <span class="badge" style="background-color: var(--primary);">#{{ group.first_order_id }}</span>
       </td>
       <td>
         <div class="d-flex flex-wrap gap-1">
@@ -87,7 +87,7 @@
     <tr class="group-details" id="details-{{ group.session_id }}" style="display: none;">
       <td colspan="10" class="bg-light" style="padding: 8px;">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <strong style="font-size:12.5px;"><i class="fas fa-list"></i> {{ group.reference }} Breakdown:</strong>
+          <strong style="font-size:12.5px;"><i class="fas fa-list"></i> Order #{{ group.first_order_id }} Breakdown:</strong>
           <div style="font-size:12px;">
             <span class="me-3"><i class="fas fa-user-tie"></i> {{ group.waiter_name }}</span>
             <span><i class="fas fa-map-marker-alt"></i> {{ group.location_display }}</span>
@@ -107,7 +107,15 @@
               <td class="text-end">{{ item.unit_price|floatformat:"0"|intcomma }}/=</td>
               <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:"0"|intcomma }}/=</td>
               <td>
-                <button class="btn btn-outline-warning btn-sm edit-order" data-order-id="{{ item.order_ids.0 }}" title="Edit"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-outline-warning btn-sm breakdown-edit-btn" 
+        data-session-id="{{ group.session_id }}"
+        data-item-id="{{ item.menu_item.id }}"
+        data-item-name="{{ item.menu_item.name }}"
+        data-unit-price="{{ item.unit_price }}"
+        data-current-qty="{{ item.quantity }}"
+        title="Edit Quantity">
+    <i class="fas fa-edit"></i>
+</button>
                 <button class="btn btn-outline-danger btn-sm delete-order" data-order-id="{{ item.order_ids.0 }}" title="Delete"><i class="fas fa-trash"></i></button>
               </td>
             </tr>
