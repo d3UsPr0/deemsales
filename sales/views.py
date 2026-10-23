@@ -194,6 +194,7 @@ def home_view(request):
         
         grouped_orders.append({
             'order_number': order_number,
+            'reference': first.reference or f"ORD-{first.id}",
             'session_id': session_key,
             'combined_items': combined_list,
             'created_at': first.created_at,
@@ -267,6 +268,7 @@ def home_view(request):
         
         unpaid_grouped.append({
             'order_number': unpaid_num,
+            'reference': first.reference or f"ORD-{first.id}",
             'session_id': session_key,
             'combined_items': combined_list,
             'created_at': first.created_at,
@@ -293,12 +295,31 @@ def home_view(request):
     
     unpaid_total = sum(g['total_amount'] for g in unpaid_grouped)
     
+        # ============================================================
+    # PAGINATION for both tabs (20 per page)
+    # ============================================================
+    from django.core.paginator import Paginator
+    
+    # Latest Orders pagination
+    latest_page_num = request.GET.get('latest_page', 1)
+    latest_paginator = Paginator(grouped_orders, 20)
+    latest_page = latest_paginator.get_page(latest_page_num)
+    
+    # Unpaid Orders pagination
+    unpaid_page_num = request.GET.get('unpaid_page', 1)
+    unpaid_paginator = Paginator(unpaid_grouped, 20)
+    unpaid_page = unpaid_paginator.get_page(unpaid_page_num)
+    
     context = {
         'categories': categories,
         'menu_items': menu_items,
         'waiters': waiters,
-        'grouped_orders': grouped_orders,
-        'unpaid_grouped': unpaid_grouped,
+        'grouped_orders': latest_page.object_list,   # Only current page
+        'latest_page': latest_page,
+        'latest_paginator': latest_paginator,
+        'unpaid_grouped': unpaid_page.object_list,   # Only current page
+        'unpaid_page': unpaid_page,
+        'unpaid_paginator': unpaid_paginator,
         'unpaid_total': unpaid_total,
         'unpaid_count': len(unpaid_grouped),
         'total_collection': total_collection,
@@ -325,6 +346,19 @@ def submit_orders(request):
         try:
             with transaction.atomic():
                 session_id = datetime.now().strftime('%Y%m%d%H%M%S') + str(request.user.id)
+                
+                # Generate readable reference: ORD-XXXX
+                from .models import Order as OrderModel
+                last_ref = OrderModel.objects.filter(reference__startswith='ORD-').order_by('-id').first()
+                if last_ref and last_ref.reference:
+                    try:
+                        last_num = int(last_ref.reference.replace('ORD-', ''))
+                    except:
+                        last_num = 0
+                else:
+                    last_num = 0
+                new_ref_num = last_num + 1
+                reference = f"ORD-{new_ref_num}"
                 
                 user_role = get_user_role(request.user)
                 
@@ -368,6 +402,7 @@ def submit_orders(request):
                                     location_type=location_type,
                                     location_detail=location_detail if location_detail else None,
                                     notes=notes,
+                                    reference=reference,
                                     created_by=request.user,
                                     session_id=session_id
                                 )
@@ -1699,3 +1734,116 @@ def audit_log_detail(request, log_id):
         'data_after': log.data_after,
         'changes': log.get_changed_fields(),
     })
+    
+@login_required
+def get_orders_page(request):
+    """AJAX endpoint — returns just the table HTML for a paginated tab"""
+    from django.template.loader import render_to_string
+    from django.core.paginator import Paginator
+    from django.db.models import Sum
+    
+    tab = request.GET.get('tab', 'latest')
+    page_num = request.GET.get('page', 1)
+    
+    user_role = get_user_role(request.user)
+    is_waiter = user_role == 'waiter'
+    today = timezone.now().date()
+    
+    base_orders = Order.objects.all()
+    if is_waiter:
+        base_orders = base_orders.filter(waiter_user=request.user)
+    
+    if tab == 'latest':
+        today_orders = base_orders.filter(
+            created_at__date=today
+        ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
+        
+        grouped = _build_grouped_list(today_orders, today)
+        paginator = Paginator(grouped, 20)
+        page = paginator.get_page(page_num)
+        
+        html = render_to_string('sales/_latest_table.html', {
+            'grouped_orders': page.object_list,
+            'latest_page': page,
+        }, request=request)
+    else:  # unpaid
+        unpaid_orders = base_orders.filter(
+            status='open'
+        ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
+        
+        grouped = _build_grouped_list(unpaid_orders, today, is_unpaid=True)
+        paginator = Paginator(grouped, 20)
+        page = paginator.get_page(page_num)
+        
+        html = render_to_string('sales/_unpaid_table.html', {
+            'unpaid_grouped': page.object_list,
+            'unpaid_page': page,
+        }, request=request)
+    
+    return JsonResponse({'html': html, 'page': page.number})
+
+
+def _build_grouped_list(orders_qs, today, is_unpaid=False):
+    """Shared logic to build the grouped order list"""
+    session_groups = defaultdict(list)
+    for order in orders_qs:
+        session_key = order.session_id if order.session_id else f"single_{order.id}"
+        session_groups[session_key].append(order)
+    
+    result = []
+    for idx, (session_key, orders) in enumerate(session_groups.items(), 1):
+        combined_items = OrderedDict()
+        for order in orders:
+            key = order.menu_item.id
+            if key in combined_items:
+                combined_items[key]['quantity'] += order.quantity
+                combined_items[key]['total_price'] += float(order.total_price)
+                combined_items[key]['order_ids'].append(order.id)
+            else:
+                combined_items[key] = {
+                    'menu_item': order.menu_item,
+                    'quantity': order.quantity,
+                    'unit_price': float(order.unit_price),
+                    'total_price': float(order.total_price),
+                    'category': order.menu_item.category,
+                    'order_ids': [order.id],
+                }
+        
+        combined_list = list(combined_items.values())
+        first = orders[0]
+        
+        all_closed = all(o.status == 'closed' for o in orders)
+        any_closed = any(o.status == 'closed' for o in orders)
+        payment_status = 'closed' if all_closed else ('partial' if any_closed else 'open')
+        
+        group = {
+            'order_number': idx,
+            'session_id': session_key,
+            'combined_items': combined_list,
+            'created_at': first.created_at,
+            'waiter_user': first.waiter_user,
+            'waiter_name': first.get_waiter_display_name(),
+            'created_by': first.created_by,
+            'location_type': first.location_type,
+            'location_detail': first.location_detail,
+            'location_display': first.get_full_location_display(),
+            'notes': first.notes or '',
+            'total_quantity': sum(i['quantity'] for i in combined_list),
+            'total_amount': sum(i['total_price'] for i in combined_list),
+            'item_count': len(combined_list),
+            'is_group': len(orders) > 1 or len(combined_list) > 1,
+            'first_order_id': orders[-1].id,
+            'last_order_id': orders[0].id,
+            'payment_status': payment_status,
+        }
+        
+        if is_unpaid:
+            group['days_old'] = (today - first.created_at.date()).days
+        
+        result.append(group)
+    
+    result.sort(key=lambda x: x['created_at'], reverse=True)
+    for idx, g in enumerate(result, 1):
+        g['order_number'] = idx
+    
+    return result

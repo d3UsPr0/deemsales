@@ -1,0 +1,41 @@
+{% load humanize %}
+{% if page.paginator.num_pages > 1 %}
+<div class="d-flex justify-content-between align-items-center px-3 py-2 border-top pagination-footer" style="font-size:12px;">
+  <div class="text-muted">
+    Showing <strong>{{ page.start_index }}</strong>–<strong>{{ page.end_index }}</strong>
+    of <strong>{{ page.paginator.count }}</strong>
+  </div>
+  <nav>
+    <ul class="pagination pagination-sm mb-0">
+      {% if page.has_previous %}
+        <li class="page-item">
+          <a class="page-link ajax-page" href="#" 
+             data-tab="{{ ajax_tab }}" data-page="{{ page.previous_page_number }}">&laquo; Prev</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+      {% endif %}
+
+      {% for num in page.paginator.page_range %}
+        {% if num == page.number %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > page.number|add:'-3' and num < page.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link ajax-page" href="#" 
+               data-tab="{{ ajax_tab }}" data-page="{{ num }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if page.has_next %}
+        <li class="page-item">
+          <a class="page-link ajax-page" href="#" 
+             data-tab="{{ ajax_tab }}" data-page="{{ page.next_page_number }}">Next &raquo;</a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+</div>
+{% endif %}

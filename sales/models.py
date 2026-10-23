@@ -39,6 +39,11 @@ class Order(models.Model):
         ('other', 'Other'),
     ]
     
+    reference = models.CharField(
+        max_length=20, blank=True, null=True, db_index=True,
+        help_text="Human-readable unique reference, e.g., ORD-1024"
+    )
+    
     menu_item = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
     quantity = models.IntegerField(default=1)
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
