@@ -55,7 +55,7 @@
         }
         
         .login-header .icon img {
-            max-height: 48px;
+            max-height: 80px;
             max-width: 100%;
             object-fit: contain;
         }
@@ -223,13 +223,36 @@
         }
         
         @media (max-width: 480px) {
-            .login-body {
-                padding: 18px 20px 16px;
-            }
-            .login-header {
-                padding: 18px 20px 16px;
-            }
-        }
+    body {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 40px;
+    }
+    
+    .login-container {
+        max-width: 100%;
+    }
+    
+    .login-header {
+        padding: 16px 18px 14px;
+    }
+    
+    .login-header .icon img {
+        max-height: 40px;
+    }
+    
+    .login-header h4 {
+        font-size: 18px;
+    }
+    
+    .login-body {
+        padding: 16px 18px 14px;
+    }
+    
+    .login-footer {
+        padding: 0 18px 14px;
+    }
+}
     </style>
 </head>
 <body>

@@ -380,6 +380,7 @@
     padding: 4px 8px;
 }
 
+
         
         /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
@@ -387,6 +388,335 @@
             fieldset { padding: 8px 10px; }
             .menu-item-row .form-check-label { max-width: 80px; }
         }
+
+        /* ============================================================
+   MOBILE RESPONSIVE ENHANCEMENTS
+   ============================================================ */
+
+/* Global mobile font size adjustments */
+@media (max-width: 768px) {
+    body {
+        font-size: 12.5px;
+    }
+    
+    .main-content {
+        padding: 10px 8px;
+    }
+    
+    /* Navbar — tighten and prevent wrapping */
+    .navbar {
+        padding: 6px 0;
+    }
+    
+    .navbar-brand {
+        font-size: 1.1rem;
+    }
+    
+    .navbar .container {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    
+    .navbar .d-flex {
+        gap: 6px;
+    }
+    
+    /* Hide the username text on very small screens, keep badge */
+    .navbar .text-white.me-3 {
+        font-size: 11px !important;
+        margin-right: 6px !important;
+    }
+    
+    /* Reports dropdown button — smaller */
+    .navbar .dropdown-toggle {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+    }
+    
+    /* Logout button */
+    .navbar .btn-outline-light {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+    }
+    
+    /* Fieldsets — tighter spacing */
+    fieldset {
+        padding: 8px 10px;
+        margin-bottom: 8px;
+    }
+    
+    legend {
+        font-size: 11.5px;
+        padding: 4px 10px;
+    }
+    
+    /* Cards — reduce padding */
+    .card-body {
+        padding: 8px !important;
+    }
+    
+    .card-header {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+    }
+    
+    /* Section title */
+    .card-header h5 {
+        font-size: 12px !important;
+    }
+    
+    /* Menu items — stack quantity below label if needed */
+    .menu-item-row {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    
+    .menu-item-row .form-check-label {
+        max-width: 100px;
+    }
+    
+    .menu-item-price {
+        font-size: 11.5px;
+    }
+    
+    /* Tables — allow horizontal scroll smoothly */
+    .table-responsive {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+        font-size: 11px;
+        min-width: 720px; /* force horizontal scroll instead of cramming */
+    }
+    
+    .table thead th {
+        font-size: 10px;
+        padding: 6px 4px;
+    }
+    
+    .table tbody td {
+        padding: 5px 4px;
+    }
+    
+    .table .badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+    
+    /* Action buttons — allow wrap */
+    .btn-group-sm > .btn {
+        padding: 3px 6px;
+        font-size: 11px;
+    }
+    
+    /* Modals — full width on mobile */
+    .modal-dialog {
+        margin: 5px;
+    }
+    
+    .modal-body {
+        padding: 10px;
+    }
+    
+    .modal-footer {
+        padding: 8px;
+    }
+    
+    /* Stats cards — smaller */
+    .stat-card h6 {
+        font-size: 9px;
+    }
+    
+    .stat-card h3 {
+        font-size: 1.1rem !important;
+    }
+    
+    .stat-card i {
+        font-size: 1.1rem;
+    }
+    
+    /* Submit button — full width already, just reduce padding */
+    .btn-lg {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    /* Footer summary — stack into 3 columns */
+    .card.shadow.mt-3.mb-4 .row > .col-md-2,
+    .card.shadow.mt-4.mb-4 .row > .col-md-2 {
+        flex: 0 0 33.333%;
+        max-width: 33.333%;
+    }
+    
+    /* Confirm modal table — compact */
+    .modal-body .table {
+        min-width: auto;
+        font-size: 11px;
+    }
+    
+    .modal-body .table th,
+    .modal-body .table td {
+        padding: 4px 3px;
+    }
+    
+    /* Pagination footer */
+    .pagination-footer {
+        flex-direction: column;
+        gap: 6px;
+        align-items: center !important;
+    }
+    
+    .pagination {
+        font-size: 11px;
+    }
+    
+    .pagination .page-link {
+        padding: 3px 7px;
+    }
+    
+    /* Buttons — tap-friendly targets (min 36px height) */
+    .btn {
+        min-height: 32px;
+    }
+    
+    .btn-sm {
+        min-height: 28px;
+    }
+    
+    /* Alerts */
+    .alert {
+        font-size: 11.5px;
+        padding: 6px 32px 6px 10px;
+    }
+}
+
+/* ============================================================
+   VERY SMALL SCREENS (< 576px)
+   ============================================================ */
+@media (max-width: 576px) {
+    /* Navbar: hide username text, keep role badge and buttons */
+    .navbar .text-white.me-3 {
+        display: none;
+    }
+    
+    /* Reports dropdown: icon-only */
+    .navbar .dropdown-toggle {
+        padding: 4px 8px !important;
+    }
+    
+    /* Section 1: menu items take full width — stack categories vertically */
+    .menu-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Section 2 & 3: full width */
+    .row > .col-md-6,
+    .row > .col-md-4,
+    .row > .col-md-3,
+    .row > .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    /* Footer stats — 2 columns */
+    .card.shadow.mt-3.mb-4 .row > .col-md-2,
+    .card.shadow.mt-4.mb-4 .row > .col-md-2 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    /* Order entry form — tighter */
+    .form-control {
+        font-size: 13px;
+    }
+    
+    /* Hide some table columns on very small screens for clarity */
+    .table th:nth-child(3),  /* Uniq */
+    .table td:nth-child(3),
+    .table th:nth-child(4),  /* Qty */
+    .table td:nth-child(4),
+    .table th:nth-child(9),  /* By */
+    .table td:nth-child(9) {
+        display: none;
+    }
+    
+    /* Menu item label — smaller but still readable */
+    .menu-item-row .form-check-label {
+        font-size: 12px;
+    }
+    
+    /* Dropdown menu width */
+    .dropdown-menu {
+        font-size: 11px;
+    }
+    
+    /* Toast notifications */
+    .print-toast {
+        right: 10px !important;
+        left: 10px !important;
+        bottom: 10px !important;
+        max-width: none !important;
+    }
+}
+
+/* ============================================================
+   TABLET (577px - 992px)
+   ============================================================ */
+@media (min-width: 577px) and (max-width: 992px) {
+    /* Two columns for menu items */
+    .menu-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    /* Footer stats — 3 columns */
+    .card.shadow.mt-3.mb-4 .row > .col-md-2,
+    .card.shadow.mt-4.mb-4 .row > .col-md-2 {
+        flex: 0 0 33.333%;
+        max-width: 33.333%;
+    }
+}
+
+/* Action buttons: wrap gracefully on mobile */
+@media (max-width: 768px) {
+    .action-group {
+        display: flex !important;
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+    
+    .action-group > .btn,
+    .action-group > .btn-group {
+        border-radius: 4px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Bigger tap targets for status toggle */
+    .status-toggle-btn {
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+    }
+    
+    /* Bigger pagination links */
+    .pagination .page-link {
+        min-width: 32px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 768px) {
+    .btn:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    
+    .card:hover {
+        transform: none !important;
+    }
+}
     </style>
 </head>
 <body>
