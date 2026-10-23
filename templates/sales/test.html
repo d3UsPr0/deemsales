@@ -36,7 +36,7 @@
                           {{ item.name }}
                         </label>
                         <span class="badge" style="background-color: var(--primary)">
-                          {{ item.price }} /=
+                          {{ item.price }}
                         </span>
                         <input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}"
                                class="form-control form-control-sm ms-2" style="width: 60px"
@@ -215,7 +215,7 @@
 
             <td>
               <span class="fw-bold fs-6" style="color: var(--secondary)">
-                {{ group.total_amount|floatformat:0 }} /=
+                {{ group.total_amount|floatformat:0 }}
               </span>
             </td>
 
@@ -372,8 +372,8 @@
                         <td class="text-center">
                           <span class="badge bg-primary fs-6">{{ item.quantity }}</span>
                         </td>
-                        <td class="text-end">{{ item.unit_price|floatformat:0 }} /=</td>
-                        <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:0 }} /=</td>
+                        <td class="text-end">{{ item.unit_price|floatformat:0 }}</td>
+                        <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:0 }}</td>
                         <td>
                           <div class="btn-group btn-group-sm">
                             <button class="btn btn-outline-warning edit-order" data-order-id="{{ item.order_ids.0 }}" title="Edit this item">
@@ -394,7 +394,7 @@
                         <td colspan="3">Total</td>
                         <td class="text-center">{{ group.total_quantity }}</td>
                         <td></td>
-                        <td class="text-end">{{ group.total_amount|floatformat:0 }} /=</td>
+                        <td class="text-end">{{ group.total_amount|floatformat:0 }}</td>
                         <td></td>
                       </tr>
                     </tfoot>
@@ -549,7 +549,7 @@
                   <span style="font-size: 1.1rem">Grand Total:</span>
                 </td>
                 <td colspan="2">
-                  <span id="grandTotal" style="font-size: 1.3rem; font-weight: bold">0 /=</span>
+                  <span id="grandTotal" style="font-size: 1.3rem; font-weight: bold">0</span>
                 </td>
               </tr>
             </tfoot>
@@ -645,7 +645,7 @@
               <label class="form-label fw-bold">Menu Item</label>
               <select class="form-select" name="menu_item" id="editMenuItem">
                 {% for item in menu_items %}
-                <option value="{{ item.id }}">{{ item.name }} - {{ item.price }} /=</option>
+                <option value="{{ item.id }}">{{ item.name }} - {{ item.price }}</option>
                 {% endfor %}
               </select>
             </div>
@@ -737,7 +737,7 @@
             </div>
             <div class="col-md-4">
               <strong><i class="fas fa-money-bill"></i> Current Total:</strong> 
-              <span id="addOrderCurrentTotal">0 /=</span>
+              <span id="addOrderCurrentTotal">0</span>
             </div>
           </div>
           <div class="mt-2">
@@ -775,7 +775,7 @@
                           {{ item.name }}
                         </label>
                         <span class="badge" style="background-color: var(--primary)">
-                          {{ item.price }} /=
+                          {{ item.price }}
                         </span>
                         <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}"
                                class="form-control form-control-sm ms-2" style="width: 60px"
@@ -875,7 +875,7 @@ $(document).ready(function () {
             var itemName = $('label[for="item_' + itemId + '"]').text().trim();
             var quantity = parseInt($("#quantity_" + itemId).val()) || 1;
             var priceText = $(this).closest(".d-flex").find(".badge").text().trim();
-            var unitPrice = parseFloat(priceText.replace("/=", "").trim()) || 0;
+            var unitPrice = parseFloat(priceText.trim()) || 0;
             var subtotal = unitPrice * quantity;
 
             var categoryCard = $(this).closest(".card");
@@ -890,8 +890,8 @@ $(document).ready(function () {
                     <td class="text-center">${itemCount}</td>
                     <td><strong>${itemName}</strong></td>
                     <td class="text-center"><span class="badge bg-primary">${quantity}</span></td>
-                    <td class="text-end">${unitPrice.toLocaleString()} /=</td>
-                    <td class="text-end fw-bold" style="color: var(--secondary);">${subtotal.toLocaleString()} /=</td>
+                    <td class="text-end">${unitPrice.toLocaleString()}</td>
+                    <td class="text-end fw-bold" style="color: var(--secondary);">${subtotal.toLocaleString()}</td>
                     <td><span class="badge" style="background-color: var(--accent);">${categoryName}</span></td>
                 </tr>
             `;
@@ -900,7 +900,7 @@ $(document).ready(function () {
         });
 
         $("#totalItems").text(itemCount);
-        $("#grandTotal").text(grandTotal.toLocaleString() + " /=");
+        $("#grandTotal").text(grandTotal.toLocaleString());
 
             var waiterName = $('input[name="waiter"]:checked').closest('.form-check').find('.form-check-label').text().trim();
         var locationType = $('input[name="location_type"]:checked').val();
@@ -1026,7 +1026,7 @@ $(".add-to-group").click(function(e) {
         $("#addOrderLocation").text(locationText);
         
         // Set current total
-        $("#addOrderCurrentTotal").text(data.total_amount.toLocaleString() + ' /=');
+        $("#addOrderCurrentTotal").text(data.total_amount.toLocaleString());
         
         // Set existing items
         var existingHtml = '<div class="d-flex flex-wrap gap-1">';

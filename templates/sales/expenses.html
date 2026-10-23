@@ -1,51 +1,67 @@
-{% extends 'base.html' %}
-{% load humanize %}
-
-{% block content %}
+{% extends 'base.html' %} {% load humanize %} {% block content %}
 <!-- Header -->
 <div class="card shadow mb-3">
-  <div class="card-header d-flex justify-content-between align-items-center" 
-       style="background-color: var(--primary); color: white; padding: 8px 15px;">
-    <h5 class="mb-0" style="font-size:14px; font-weight:700;">
-      <i class="fas fa-money-bill-wave"></i> Expenses - {{ selected_date|date:"d/m/Y" }}
+  <div
+    class="card-header d-flex justify-content-between align-items-center"
+    style="background-color: var(--primary); color: white; padding: 8px 15px"
+  >
+    <h5 class="mb-0" style="font-size: 14px; font-weight: 700">
+      <i class="fas fa-money-bill-wave"></i> Expenses - {{
+      selected_date|date:"d/m/Y" }}
     </h5>
     <div>
       <a href="{% url 'home' %}" class="btn btn-light btn-sm me-1">
         <i class="fas fa-arrow-left"></i> Back
       </a>
-      <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+      <button
+        class="btn btn-success btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#addExpenseModal"
+      >
         <i class="fas fa-plus"></i> Record Expense
       </button>
     </div>
   </div>
 
   <!-- Stats -->
-  <div class="card-body" style="padding: 10px 15px;">
+  <div class="card-body" style="padding: 10px 15px">
     <div class="row text-center g-2">
       <div class="col-md-3">
-        <div class="stat-card" style="background: rgba(0,182,82,0.1); color: var(--secondary);">
+        <div
+          class="stat-card"
+          style="background: rgba(0, 182, 82, 0.1); color: var(--secondary)"
+        >
           <i class="fas fa-shopping-cart"></i>
           <h6>Today's Sales</h6>
           <h3>{{ today_sales|floatformat:"0"|intcomma }}</h3>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="stat-card" style="background: rgba(220,53,69,0.1); color: #dc3545;">
+        <div
+          class="stat-card"
+          style="background: rgba(220, 53, 69, 0.1); color: #dc3545"
+        >
           <i class="fas fa-receipt"></i>
           <h6>Today's Expenses</h6>
           <h3>{{ today_expense_total|floatformat:"0"|intcomma }}</h3>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="stat-card" style="background: {% if today_balance >= 0 %}rgba(40,167,69,0.15){% else %}rgba(220,53,69,0.15){% endif %}; 
-                                    color: {% if today_balance >= 0 %}#28a745{% else %}#dc3545{% endif %};">
+        <div
+          class="stat-card"
+          style="background: {% if today_balance >= 0 %}rgba(40,167,69,0.15){% else %}rgba(220,53,69,0.15){% endif %}; 
+                                    color: {% if today_balance >= 0 %}#28a745{% else %}#dc3545{% endif %};"
+        >
           <i class="fas fa-balance-scale"></i>
           <h6>Balance</h6>
           <h3>{{ today_balance|floatformat:"0"|intcomma }}</h3>
         </div>
       </div>
       <div class="col-md-3">
-        <div class="stat-card" style="background: rgba(84,11,2,0.08); color: var(--primary);">
+        <div
+          class="stat-card"
+          style="background: rgba(84, 11, 2, 0.08); color: var(--primary)"
+        >
           <i class="fas fa-list"></i>
           <h6>Showing</h6>
           <h3>{{ expenses|length }}</h3>
@@ -57,16 +73,29 @@
 
 <!-- Date Filter -->
 <div class="card shadow mb-3">
-  <div class="card-body" style="padding: 8px 15px;">
+  <div class="card-body" style="padding: 8px 15px">
     <form method="get" class="row g-2 align-items-center">
       <div class="col-md-4">
         <label class="form-label mb-0 small fw-bold">View date:</label>
-        <input type="date" class="form-control form-control-sm" name="date" 
-               value="{{ selected_date|date:'Y-m-d' }}" onchange="this.form.submit()">
+        <input
+          type="date"
+          class="form-control form-control-sm"
+          name="date"
+          value="{{ selected_date|date:'Y-m-d' }}"
+          onchange="this.form.submit()"
+        />
       </div>
       <div class="col-md-8 text-end">
-        <a href="{% url 'expenses_view' %}" class="btn btn-sm btn-outline-secondary">Today</a>
-        <a href="{% url 'expenses_view' %}?date={{ today|date:'Y-m-d' }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+        <a
+          href="{% url 'expenses_view' %}"
+          class="btn btn-sm btn-outline-secondary"
+          >Today</a
+        >
+        <a
+          href="{% url 'expenses_view' %}?date={{ today|date:'Y-m-d' }}"
+          class="btn btn-sm btn-outline-secondary"
+          >Reset</a
+        >
       </div>
     </form>
   </div>
@@ -78,14 +107,14 @@
     <table class="table table-hover mb-0">
       <thead>
         <tr>
-          <th style="width:50px;">#</th>
-          <th style="width:120px;">Category</th>
+          <th style="width: 50px">#</th>
+          <th style="width: 120px">Category</th>
           <th>Description</th>
-          <th style="width:120px;">Receipt #</th>
-          <th style="width:130px;">Amount</th>
-          <th style="width:120px;">Recorded By</th>
-          <th style="width:100px;">Time</th>
-          <th style="width:150px;">Actions</th>
+          <th style="width: 120px">Receipt #</th>
+          <th style="width: 130px">Amount</th>
+          <th style="width: 120px">Recorded By</th>
+          <th style="width: 100px">Time</th>
+          <th style="width: 150px">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -94,42 +123,62 @@
           <td class="text-center">{{ forloop.counter }}</td>
           <td>
             {% if expense.category == 'food' %}
-              <span class="badge" style="background-color: var(--accent);">🍽️ Food</span>
+            <span class="badge" style="background-color: var(--accent)"
+              >🍽️ Food</span
+            >
             {% elif expense.category == 'utilities' %}
-              <span class="badge bg-info">💡 Utilities</span>
+            <span class="badge bg-info">💡 Utilities</span>
             {% elif expense.category == 'rent' %}
-              <span class="badge bg-primary">🏠 Rent</span>
+            <span class="badge bg-primary">🏠 Rent</span>
             {% elif expense.category == 'salaries' %}
-              <span class="badge bg-success">💰 Salaries</span>
+            <span class="badge bg-success">💰 Salaries</span>
             {% elif expense.category == 'transport' %}
-              <span class="badge bg-secondary">🚚 Transport</span>
+            <span class="badge bg-secondary">🚚 Transport</span>
             {% elif expense.category == 'maintenance' %}
-              <span class="badge bg-warning text-dark">🔧 Maintenance</span>
+            <span class="badge bg-warning text-dark">🔧 Maintenance</span>
             {% elif expense.category == 'supplies' %}
-              <span class="badge bg-dark">📦 Supplies</span>
+            <span class="badge bg-dark">📦 Supplies</span>
             {% elif expense.category == 'marketing' %}
-              <span class="badge" style="background-color: #6f42c1;">📣 Marketing</span>
+            <span class="badge" style="background-color: #6f42c1"
+              >📣 Marketing</span
+            >
             {% else %}
-              <span class="badge bg-secondary">Other</span>
+            <span class="badge bg-secondary">Other</span>
             {% endif %}
           </td>
           <td><strong>{{ expense.description }}</strong></td>
-          <td><small class="text-muted">{{ expense.receipt_ref|default:"-" }}</small></td>
           <td>
-            <span class="fw-bold text-danger">{{ expense.amount|floatformat:"0"|intcomma }}/=</span>
+            <small class="text-muted"
+              >{{ expense.receipt_ref|default:"-" }}</small
+            >
+          </td>
+          <td>
+            <span class="fw-bold text-danger"
+              >{{ expense.amount|floatformat:"0"|intcomma
+            </span>
           </td>
           <td><small>{{ expense.recorded_by.username }}</small></td>
-          <td><small class="text-muted">{{ expense.created_at|time:"H:i" }}</small></td>
+          <td>
+            <small class="text-muted"
+              >{{ expense.created_at|time:"H:i" }}</small
+            >
+          </td>
           <td>
             <div class="btn-group btn-group-sm">
-              <button class="btn btn-warning edit-expense-btn" data-id="{{ expense.id }}" title="Edit">
+              <button
+                class="btn btn-warning edit-expense-btn"
+                data-id="{{ expense.id }}"
+                title="Edit"
+              >
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn btn-danger delete-expense-btn" 
-                      data-id="{{ expense.id }}" 
-                      data-desc="{{ expense.description }}"
-                      data-amount="{{ expense.amount|floatformat:0 }}"
-                      title="Delete">
+              <button
+                class="btn btn-danger delete-expense-btn"
+                data-id="{{ expense.id }}"
+                data-desc="{{ expense.description }}"
+                data-amount="{{ expense.amount|floatformat:0 }}"
+                title="Delete"
+              >
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -145,10 +194,14 @@
         {% endfor %}
       </tbody>
       {% if expenses %}
-      <tfoot style="background-color: #f8f9fa; font-weight: bold;">
+      <tfoot style="background-color: #f8f9fa; font-weight: bold">
         <tr>
-          <td colspan="4" class="text-end">Total for {{ selected_date|date:"d/m/Y" }}:</td>
-          <td class="text-danger">{{ selected_total|floatformat:"0"|intcomma }}/=</td>
+          <td colspan="4" class="text-end">
+            Total for {{ selected_date|date:"d/m/Y" }}:
+          </td>
+          <td class="text-danger">
+            {{ selected_total|floatformat:"0"|intcomma
+          </td>
           <td colspan="3"></td>
         </tr>
       </tfoot>
@@ -161,45 +214,96 @@
 <div class="modal fade" id="addExpenseModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header" style="background-color: var(--secondary); color: white;">
+      <div
+        class="modal-header"
+        style="background-color: var(--secondary); color: white"
+      >
         <h5 class="modal-title"><i class="fas fa-plus"></i> Record Expense</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
       <form method="post" action="{% url 'add_expense' %}">
         {% csrf_token %}
         <div class="modal-body">
           <div class="row g-2">
             <div class="col-md-6">
-              <label class="form-label">Category <span class="text-danger">*</span></label>
-              <select class="form-select form-select-sm" name="category" required>
+              <label class="form-label"
+                >Category <span class="text-danger">*</span></label
+              >
+              <select
+                class="form-select form-select-sm"
+                name="category"
+                required
+              >
                 {% for key, label in categories %}
                 <option value="{{ key }}">{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Amount (TZS) <span class="text-danger">*</span></label>
-              <input type="number" class="form-control form-control-sm" name="amount" required min="0" step="0.01" autofocus>
+              <label class="form-label"
+                >Amount (TZS) <span class="text-danger">*</span></label
+              >
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                name="amount"
+                required
+                min="0"
+                step="0.01"
+                autofocus
+              />
             </div>
             <div class="col-md-6">
-              <label class="form-label">Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control form-control-sm" name="date" 
-                     value="{{ today|date:'Y-m-d' }}" required>
+              <label class="form-label"
+                >Date <span class="text-danger">*</span></label
+              >
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                name="date"
+                value="{{ today|date:'Y-m-d' }}"
+                required
+              />
             </div>
             <div class="col-md-6">
               <label class="form-label">Receipt # (optional)</label>
-              <input type="text" class="form-control form-control-sm" name="receipt_ref" maxlength="100">
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                name="receipt_ref"
+                maxlength="100"
+              />
             </div>
             <div class="col-12">
-              <label class="form-label">Description <span class="text-danger">*</span></label>
-              <textarea class="form-control form-control-sm" name="description" rows="2" 
-                        required maxlength="255" placeholder="What was this expense for?"></textarea>
+              <label class="form-label"
+                >Description <span class="text-danger">*</span></label
+              >
+              <textarea
+                class="form-control form-control-sm"
+                name="description"
+                rows="2"
+                required
+                maxlength="255"
+                placeholder="What was this expense for?"
+              ></textarea>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-save"></i> Save Expense</button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="fas fa-save"></i> Save Expense
+          </button>
         </div>
       </form>
     </div>
@@ -210,82 +314,144 @@
 <div class="modal fade" id="editExpenseModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header" style="background-color: var(--accent); color: white;">
+      <div
+        class="modal-header"
+        style="background-color: var(--accent); color: white"
+      >
         <h5 class="modal-title"><i class="fas fa-edit"></i> Edit Expense</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+        ></button>
       </div>
       <form method="post" id="editExpenseForm">
         {% csrf_token %}
         <div class="modal-body">
           <div class="row g-2">
             <div class="col-md-6">
-              <label class="form-label">Category <span class="text-danger">*</span></label>
-              <select class="form-select form-select-sm" name="category" id="editExpCat" required>
+              <label class="form-label"
+                >Category <span class="text-danger">*</span></label
+              >
+              <select
+                class="form-select form-select-sm"
+                name="category"
+                id="editExpCat"
+                required
+              >
                 {% for key, label in categories %}
                 <option value="{{ key }}">{{ label }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Amount (TZS) <span class="text-danger">*</span></label>
-              <input type="number" class="form-control form-control-sm" name="amount" id="editExpAmount" required min="0" step="0.01">
+              <label class="form-label"
+                >Amount (TZS) <span class="text-danger">*</span></label
+              >
+              <input
+                type="number"
+                class="form-control form-control-sm"
+                name="amount"
+                id="editExpAmount"
+                required
+                min="0"
+                step="0.01"
+              />
             </div>
             <div class="col-md-6">
-              <label class="form-label">Date <span class="text-danger">*</span></label>
-              <input type="date" class="form-control form-control-sm" name="date" id="editExpDate" required>
+              <label class="form-label"
+                >Date <span class="text-danger">*</span></label
+              >
+              <input
+                type="date"
+                class="form-control form-control-sm"
+                name="date"
+                id="editExpDate"
+                required
+              />
             </div>
             <div class="col-md-6">
               <label class="form-label">Receipt # (optional)</label>
-              <input type="text" class="form-control form-control-sm" name="receipt_ref" id="editExpRef" maxlength="100">
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                name="receipt_ref"
+                id="editExpRef"
+                maxlength="100"
+              />
             </div>
             <div class="col-12">
-              <label class="form-label">Description <span class="text-danger">*</span></label>
-              <textarea class="form-control form-control-sm" name="description" id="editExpDesc" rows="2" required maxlength="255"></textarea>
+              <label class="form-label"
+                >Description <span class="text-danger">*</span></label
+              >
+              <textarea
+                class="form-control form-control-sm"
+                name="description"
+                id="editExpDesc"
+                rows="2"
+                required
+                maxlength="255"
+              ></textarea>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-warning btn-sm"><i class="fas fa-save"></i> Update</button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-sm"
+            data-bs-dismiss="modal"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-warning btn-sm">
+            <i class="fas fa-save"></i> Update
+          </button>
         </div>
       </form>
     </div>
   </div>
 </div>
-{% endblock %}
-
-{% block extra_scripts %}
+{% endblock %} {% block extra_scripts %}
 <script>
-$(document).ready(function() {
-
+  $(document).ready(function () {
     // Edit expense
-    $('.edit-expense-btn').click(function() {
-        var id = $(this).data('id');
-        
-        $.get('/expenses/get/' + id + '/', function(data) {
-            $('#editExpCat').val(data.category);
-            $('#editExpAmount').val(data.amount);
-            $('#editExpDate').val(data.date);
-            $('#editExpRef').val(data.receipt_ref);
-            $('#editExpDesc').val(data.description);
-            $('#editExpenseForm').attr('action', '/expenses/edit/' + id + '/');
-            $('#editExpenseModal').modal('show');
-        });
+    $(".edit-expense-btn").click(function () {
+      var id = $(this).data("id");
+
+      $.get("/expenses/get/" + id + "/", function (data) {
+        $("#editExpCat").val(data.category);
+        $("#editExpAmount").val(data.amount);
+        $("#editExpDate").val(data.date);
+        $("#editExpRef").val(data.receipt_ref);
+        $("#editExpDesc").val(data.description);
+        $("#editExpenseForm").attr("action", "/expenses/edit/" + id + "/");
+        $("#editExpenseModal").modal("show");
+      });
     });
 
     // Delete expense
-    $('.delete-expense-btn').click(function() {
-        var id = $(this).data('id');
-        var desc = $(this).data('desc');
-        var amount = $(this).data('amount');
-        
-        if (confirm('Delete expense?\n\n"' + desc + '"\nAmount: ' + amount + ' TZS\n\nThis cannot be undone.')) {
-            var form = $('<form method="post" action="/expenses/delete/' + id + '/"></form>');
-            form.append('{% csrf_token %}');
-            $('body').append(form);
-            form.submit();
-        }
+    $(".delete-expense-btn").click(function () {
+      var id = $(this).data("id");
+      var desc = $(this).data("desc");
+      var amount = $(this).data("amount");
+
+      if (
+        confirm(
+          'Delete expense?\n\n"' +
+            desc +
+            '"\nAmount: ' +
+            amount +
+            " TZS\n\nThis cannot be undone.",
+        )
+      ) {
+        var form = $(
+          '<form method="post" action="/expenses/delete/' + id + '/"></form>',
+        );
+        form.append("{% csrf_token %}");
+        $("body").append(form);
+        form.submit();
+      }
     });
-});
+  });
 </script>
 {% endblock %}

@@ -15,7 +15,7 @@
             <tbody id="orderSummaryBody"></tbody>
             <tfoot style="background-color: #f8f9fa; font-weight: bold">
               <tr><td colspan="4" class="text-end">Total Items:</td><td colspan="2"><span id="totalItems" style="color: var(--primary); font-size: 1.2rem">0</span> items</td></tr>
-              <tr style="background-color: var(--accent); color: white"><td colspan="4" class="text-end">Grand Total:</td><td colspan="2"><span id="grandTotal" style="font-size: 1.3rem; font-weight: bold">0 /=</span></td></tr>
+              <tr style="background-color: var(--accent); color: white"><td colspan="4" class="text-end">Grand Total:</td><td colspan="2"><span id="grandTotal" style="font-size: 1.3rem; font-weight: bold">0</span></td></tr>
             </tfoot>
           </table>
         </div>
@@ -53,7 +53,7 @@
     <div class="modal-body">
       <form id="editOrderForm" method="post">{% csrf_token %}<input type="hidden" name="order_id" id="editOrderId"/>
         <div class="row">
-          <div class="col-md-6 mb-3"><label class="form-label fw-bold">Menu Item</label><select class="form-select" name="menu_item" id="editMenuItem">{% for item in menu_items %}<option value="{{ item.id }}">{{ item.name }} - {{ item.price }} /=</option>{% endfor %}</select></div>
+          <div class="col-md-6 mb-3"><label class="form-label fw-bold">Menu Item</label><select class="form-select" name="menu_item" id="editMenuItem">{% for item in menu_items %}<option value="{{ item.id }}">{{ item.name }} - {{ item.price }}</option>{% endfor %}</select></div>
           <div class="col-md-3 mb-3"><label class="form-label fw-bold">Quantity</label><input type="number" class="form-control" name="quantity" id="editQuantity" min="1"/></div>
           <div class="col-md-3 mb-3"><label class="form-label fw-bold">Waiter</label><select class="form-select" name="waiter" id="editWaiter"><option value="">-- Select --</option>{% for waiter in waiters %}<option value="{{ waiter.id }}">{{ waiter.display_name }}</option>{% endfor %}</select></div>
         </div>
@@ -84,7 +84,7 @@
         <div class="row">
           <div class="col-md-4"><strong><i class="fas fa-user-tie"></i> Waiter:</strong> <span id="addOrderWaiter">-</span></div>
           <div class="col-md-4"><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> <span id="addOrderLocation">-</span></div>
-          <div class="col-md-4"><strong><i class="fas fa-money-bill"></i> Current Total:</strong> <span id="addOrderCurrentTotal">0 /=</span></div>
+          <div class="col-md-4"><strong><i class="fas fa-money-bill"></i> Current Total:</strong> <span id="addOrderCurrentTotal">0</span></div>
         </div>
         <div class="mt-2"><strong><i class="fas fa-list"></i> Existing Items:</strong><div id="addOrderExistingItems" class="mt-1"></div></div>
         <div class="mt-2" id="addOrderNotesContainer" style="display:none;"><strong><i class="fas fa-sticky-note"></i> Notes:</strong> <span id="addOrderNotes" class="text-muted fst-italic"></span></div>
@@ -99,7 +99,7 @@
               <div class="d-flex align-items-center mb-2">
                 <input type="checkbox" name="item_{{ item.id }}" id="add_item_{{ item.id }}" class="form-check-input me-2 add-menu-checkbox" data-item-id="{{ item.id }}"/>
                 <label for="add_item_{{ item.id }}" class="flex-grow-1">{{ item.name }}</label>
-                <span class="badge" style="background-color: var(--primary)">{{ item.price }} /=</span>
+                <span class="badge" style="background-color: var(--primary)">{{ item.price }}</span>
                 <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}" class="form-control form-control-sm ms-2" style="width:60px" value="1" min="1" disabled/>
               </div>
               {% endif %}{% endfor %}

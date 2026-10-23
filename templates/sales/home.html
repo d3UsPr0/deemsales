@@ -36,7 +36,7 @@
                             {{ item.name }}
                           </label>
                         </div>
-                        <span class="menu-item-price">{{ item.price|floatformat:"0"|intcomma }}/=</span>
+                        <span class="menu-item-price">{{ item.price|floatformat:"0"|intcomma }}</span>
                         <div class="qty-control">
     <button type="button" class="qty-minus" data-target="quantity_{{ item.id }}" tabindex="-1">−</button>
     <input type="number" name="quantity_{{ item.id }}" id="quantity_{{ item.id }}"
@@ -185,7 +185,7 @@
         </div>
         <div>
           <strong>Total Outstanding: </strong>
-          <span class="badge bg-danger" style="font-size:13px;">{{ unpaid_total|floatformat:"0"|intcomma }}/=</span>
+          <span class="badge bg-danger" style="font-size:13px;">{{ unpaid_total|floatformat:"0"|intcomma }}</span>
         </div>
       </div>
       {% endif %}
@@ -281,7 +281,7 @@
             <tbody id="orderSummaryBody"></tbody>
             <tfoot style="background-color: #f8f9fa; font-weight: bold;">
               <tr><td colspan="4" class="text-end">Total Items:</td><td colspan="2"><span id="totalItems" style="color: var(--primary);">0</span> items</td></tr>
-              <tr style="background-color: var(--accent); color: white;"><td colspan="4" class="text-end">Grand Total:</td><td colspan="2"><span id="grandTotal" style="font-weight: bold;">0 /=</span></td></tr>
+              <tr style="background-color: var(--accent); color: white;"><td colspan="4" class="text-end">Grand Total:</td><td colspan="2"><span id="grandTotal" style="font-weight: bold;">0</span></td></tr>
             </tfoot>
           </table>
         </div>
@@ -435,7 +435,7 @@
         <div class="row">
           <div class="col-md-4"><strong><i class="fas fa-user-tie"></i> Waiter:</strong> <span id="addOrderWaiter">-</span></div>
           <div class="col-md-4"><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> <span id="addOrderLocation">-</span></div>
-          <div class="col-md-4"><strong><i class="fas fa-money-bill"></i> Current Total:</strong> <span id="addOrderCurrentTotal">0 /=</span></div>
+          <div class="col-md-4"><strong><i class="fas fa-money-bill"></i> Current Total:</strong> <span id="addOrderCurrentTotal">0</span></div>
         </div>
         <div class="mt-1"><strong><i class="fas fa-list"></i> Existing Items:</strong><div id="addOrderExistingItems" class="mt-1"></div></div>
         <div class="mt-1" id="addOrderNotesContainer" style="display:none;"><strong><i class="fas fa-sticky-note"></i> Notes:</strong> <span id="addOrderNotes" class="text-muted fst-italic"></span></div>
@@ -452,7 +452,7 @@
                   <input type="checkbox" name="item_{{ item.id }}" id="add_item_{{ item.id }}" class="form-check-input add-menu-checkbox" data-item-id="{{ item.id }}"/>
                   <label for="add_item_{{ item.id }}" class="form-check-label" title="{{ item.name }}">{{ item.name }}</label>
                 </div>
-                <span class="menu-item-price">{{ item.price }}/=</span>
+                <span class="menu-item-price">{{ item.price }}</span>
                 <div class="qty-control">
     <button type="button" class="qty-minus" data-target="add_quantity_{{ item.id }}" tabindex="-1">−</button>
     <input type="number" name="quantity_{{ item.id }}" id="add_quantity_{{ item.id }}"
@@ -494,12 +494,12 @@
             <input type="number" id="bq_qty" style="width: 50px;" min="0" value="1">
             <button type="button" id="bq_plus" tabindex="-1">+</button>
           </div>
-          <span style="font-size:12px;">× <span id="bq_unit_price">0</span>/=</span>
+          <span style="font-size:12px;">× <span id="bq_unit_price">0</span></span>
         </div>
         
         <div class="mt-2" style="font-size:12px;">
           <strong>Subtotal: </strong>
-          <span id="bq_subtotal" style="color: var(--secondary); font-weight:700;">0/=</span>
+          <span id="bq_subtotal" style="color: var(--secondary); font-weight:700;">0</span>
         </div>
         
         <div class="alert alert-warning mt-2 mb-0" style="font-size:11px; padding:6px 10px;">
@@ -646,11 +646,11 @@ var row = `
         </div>
         <div class="text-end" style="min-width: 80px; flex-shrink: 0;">
             <span class="badge bg-secondary" style="font-size:11px;">
-                ${item.unit_price.toLocaleString()}/=
+                ${item.unit_price.toLocaleString()}
             </span>
             <br>
             <strong style="color: var(--secondary); font-size:12px;">
-                ${subtotal.toLocaleString()}/=
+                ${subtotal.toLocaleString()}
             </strong>
         </div>
         <button type="button" class="btn btn-sm btn-outline-danger remove-edit-item" 
@@ -663,7 +663,7 @@ var row = `
         container.append(row);
     });
     
-    $('#editItemsTotal').html(`<strong>${itemCount} item type${itemCount !== 1 ? 's' : ''} • ${totalQty} total qty • ${total.toLocaleString()}/=</strong>`);
+    $('#editItemsTotal').html(`<strong>${itemCount} item type${itemCount !== 1 ? 's' : ''} • ${totalQty} total qty • ${total.toLocaleString()}</strong>`);
     rebuildEditHiddenInputs();
 }
 
@@ -746,14 +746,15 @@ $(document).on("change", ".add-menu-checkbox", function () {
             var itemId = $(this).data("item-id");
             var itemName = $('label[for="item_' + itemId + '"]').text().trim();
             var quantity = parseInt($("#quantity_" + itemId).val()) || 1;
-            var priceText = $(this).closest(".menu-item-row").find(".menu-item-price").text().replace("/=", "").trim();
+            var priceText = $(this).closest(".menu-item-row").find(".menu-item-price").text().trim();
             var unitPrice = parseFloat(priceText.replace(/,/g, "")) || 0;
             var subtotal = unitPrice * quantity;
             var categoryName = $(this).closest(".card").find(".card-header").text().trim();
             itemCount += quantity; grandTotal += subtotal; hasItems = true;
-            summaryBody.append('<tr><td class="text-center">' + itemCount + '</td><td><strong>' + itemName + '</strong></td><td class="text-center"><span class="badge bg-primary">' + quantity + '</span></td><td class="text-end">' + unitPrice.toLocaleString() + ' /=</td><td class="text-end fw-bold" style="color:var(--secondary);">' + subtotal.toLocaleString() + ' /=</td><td><span class="badge" style="background-color:var(--accent);">' + categoryName + '</span></td></tr>');
+            summaryBody.append('<tr><td class="text-center">' + itemCount + '</td><td><strong>' + itemName + '</strong></td><td class="text-center"><span class="badge bg-primary">' + quantity + '</span></td><td class="text-end">' + unitPrice.toLocaleString() + '</td><td class="text-end fw-bold" style="color:var(--secondary);">' + subtotal.toLocaleString() + '</td><td><span class="badge" style="background-color:var(--accent);">' + categoryName + '</span></td></tr>');
+
         });
-        $("#totalItems").text(itemCount); $("#grandTotal").text(grandTotal.toLocaleString() + " /=");
+        $("#totalItems").text(itemCount); $("#grandTotal").text(grandTotal.toLocaleString());
         
         var waiterName = '';
         var $checkedWaiter = $('input[name="waiter"]:checked');
@@ -818,7 +819,7 @@ $(document).on("change", ".add-menu-checkbox", function () {
             $("#addOrderWaiter").text(data.waiter_name || 'N/A');
             var loc = data.location_type === 'table' ? 'Table' : data.location_type === 'takeaway' ? 'Takeaway' : (data.location_detail || 'Other');
             if (data.location_detail && data.location_type !== 'other') loc += ' #' + data.location_detail;
-            $("#addOrderLocation").text(loc); $("#addOrderCurrentTotal").text(data.total_amount.toLocaleString() + ' /=');
+            $("#addOrderLocation").text(loc);$("#addOrderCurrentTotal").text(data.total_amount.toLocaleString());
             var html = '<div class="d-flex flex-wrap gap-1">';
             data.existing_items.forEach(function(item) { html += '<span class="badge" style="background-color:var(--secondary); font-size:11px;">' + item.menu_item_name + '<span class="badge bg-light text-dark ms-1" style="font-size:10px;">x' + item.quantity + '</span></span>'; });
             html += '</div>'; $("#addOrderExistingItems").html(html);
@@ -939,7 +940,7 @@ $(document).on('click', '.breakdown-edit-btn', function(e) {
 function updateBqSubtotal() {
     var qty = parseInt($('#bq_qty').val()) || 0;
     var subtotal = qty * bqUnitPrice;
-    $('#bq_subtotal').text(subtotal.toLocaleString() + '/=');
+    $('#bq_subtotal').text(subtotal.toLocaleString());
 }
 
 $('#bq_minus').click(function() {
