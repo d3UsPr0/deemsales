@@ -550,6 +550,9 @@
 // ============ MARK AS PAID (global) ============
 function markAsPaid(sessionId) {
     if (confirm('Mark this order as PAID and close it?\n\nThe order will move to the Latest Orders tab.')) {
+        // Remember unpaid tab so we stay here after reload
+        sessionStorage.setItem('activeTab', 'unpaid');
+        
         $.ajax({
             url: "/toggle-group-status/" + sessionId + "/",
             method: "POST",
@@ -794,14 +797,30 @@ $(document).on("change", ".add-menu-checkbox", function () {
 });
     
     $(document).on("click", ".delete-group", function () {
-        if (confirm("Delete this entire order? This cannot be undone!")) {
-            localStorage.setItem('scrollPos', $(window).scrollTop());
-            var form = $('<form method="post" action="/delete-group/' + $(this).data("session-id") + '/"></form>');
-            form.append('{% csrf_token %}');
-            $("body").append(form);
-            form.submit();
-        }
-    });
+    if (confirm("Delete this entire order? This cannot be undone!")) {
+        localStorage.setItem('scrollPos', $(window).scrollTop());
+        var inUnpaid = $(this).closest('.tab-pane').attr('id') === 'unpaid-orders';
+        if (inUnpaid) sessionStorage.setItem('activeTab', 'unpaid');
+        
+        var form = $('<form method="post" action="/delete-group/' + $(this).data("session-id") + '/"></form>');
+        form.append('{% csrf_token %}');
+        $("body").append(form);
+        form.submit();
+    }
+});
+
+$(document).on("click", ".delete-order", function () {
+    if (confirm("Delete this order?")) {
+        localStorage.setItem('scrollPos', $(window).scrollTop());
+        var inUnpaid = $(this).closest('.tab-pane').attr('id') === 'unpaid-orders';
+        if (inUnpaid) sessionStorage.setItem('activeTab', 'unpaid');
+        
+        var form = $('<form method="post" action="/delete-order/' + $(this).data("order-id") + '/"></form>');
+        form.append('{% csrf_token %}');
+        $("body").append(form);
+        form.submit();
+    }
+});
     
     $(document).on("click", ".delete-order", function () {
         if (confirm("Delete this order?")) {
@@ -834,16 +853,31 @@ $(document).on("change", ".add-menu-checkbox", function () {
     $(document).on("change", ".add-menu-checkbox", function() { $("#add_quantity_" + $(this).data('item-id')).prop('disabled', !$(this).is(':checked')); });
     
     $(document).on("click", ".toggle-group-status", function (e) {
-        e.preventDefault(); var sessionId = $(this).data("session-id");
-        $.ajax({ url: "/toggle-group-status/" + sessionId + "/", method: "POST", headers: { "X-CSRFToken": "{{ csrf_token }}" }, success: function() { location.reload(); } });
+    e.preventDefault();
+    var sessionId = $(this).data("session-id");
+    // Remember which tab we're on
+    var activeTab = $(this).closest('.tab-pane').attr('id') === 'unpaid-orders' ? 'unpaid' : 'latest';
+    sessionStorage.setItem('activeTab', activeTab);
+    
+    $.ajax({ 
+        url: "/toggle-group-status/" + sessionId + "/", 
+        method: "POST", 
+        headers: { "X-CSRFToken": "{{ csrf_token }}" }, 
+        success: function() { location.reload(); } 
     });
+});
 });
 
 $(document).ready(function() {
-    // Preserve active tab from URL
+    // Preserve active tab — check URL first, then sessionStorage
     var urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has('unpaid_page')) {
-        // Activate the Unpaid tab
+    var activeTab = sessionStorage.getItem('activeTab');
+    
+    // Clear the flag after reading (one-time use)
+    sessionStorage.removeItem('activeTab');
+    
+    // If URL has unpaid_page OR sessionStorage says unpaid → show unpaid
+    if (urlParams.has('unpaid_page') || activeTab === 'unpaid') {
         var unpaidTab = document.querySelector('#unpaid-tab');
         if (unpaidTab) {
             var tab = new bootstrap.Tab(unpaidTab);
@@ -976,6 +1010,8 @@ $('#bq_save').click(function() {
         success: function(data) {
             if (data.success) {
                 $('#breakdownQtyModal').modal('hide');
+                var inUnpaid = $('.tab-pane.active').attr('id') === 'unpaid-orders';
+                if (inUnpaid) sessionStorage.setItem('activeTab', 'unpaid');
                 location.reload();
             } else {
                 alert('Error: ' + (data.error || 'Unknown'));

@@ -229,11 +229,12 @@ def home_view(request):
         else:
             open_count += 1
     
-    # ============================================================
-    # TAB 2: UNPAID ORDERS (all dates, status = open)
+        # ============================================================
+    # TAB 2: UNPAID ORDERS (all dates, status = open, not cancelled)
     # ============================================================
     unpaid_orders = base_orders.filter(
-        status='open'
+        status='open',
+        # is_cancelled=False  # ← add this in V2
     ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
     
     unpaid_groups = defaultdict(list)
@@ -1614,6 +1615,7 @@ def expenses_view(request):
     expenses = Expense.objects.filter(date=selected_date).select_related('recorded_by')
     today_expenses = Expense.objects.filter(date=today)
     today_expense_total = sum(float(e.amount) for e in today_expenses)
+    # today_orders = Order.objects.filter(created_at__date=today, is_cancelled=False)
     today_orders = Order.objects.filter(created_at__date=today)
     today_sales = sum(float(o.total_price) for o in today_orders)
     
@@ -1874,7 +1876,7 @@ def _build_grouped_list(orders_qs, today, is_unpaid=False):
             'total_amount': sum(i['total_price'] for i in combined_list),
             'item_count': len(combined_list),
             'is_group': len(orders) > 1 or len(combined_list) > 1,
-            'first_order_id': orders[-1].id,
+            'first_order_id': orders[-1].group_id or orders[-1].id,
             'last_order_id': orders[0].id,
             'payment_status': payment_status,
         }

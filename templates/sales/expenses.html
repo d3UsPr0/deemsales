@@ -111,7 +111,7 @@
           <th style="width: 120px">Category</th>
           <th>Description</th>
           <th style="width: 120px">Receipt #</th>
-          <th style="width: 130px">Amount</th>
+          <th style="width: 130px" class="text-end">Amount</th>
           <th style="width: 120px">Recorded By</th>
           <th style="width: 100px">Time</th>
           <th style="width: 150px">Actions</th>
@@ -152,11 +152,9 @@
               >{{ expense.receipt_ref|default:"-" }}</small
             >
           </td>
-          <td>
-            <span class="fw-bold text-danger"
-              >{{ expense.amount|floatformat:"0"|intcomma
-            </span>
-          </td>
+         <td class="text-end">
+          <span class="fw-bold text-danger">{{ expense.amount|floatformat:"0"|intcomma }}</span>
+        </td>
           <td><small>{{ expense.recorded_by.username }}</small></td>
           <td>
             <small class="text-muted"
@@ -200,7 +198,7 @@
             Total for {{ selected_date|date:"d/m/Y" }}:
           </td>
           <td class="text-danger">
-            {{ selected_total|floatformat:"0"|intcomma
+            {{ selected_total|floatformat:"0"|intcomma }}
           </td>
           <td colspan="3"></td>
         </tr>
