@@ -62,4 +62,18 @@ urlpatterns = [
     
     #Quick Edit Quantity Breakdown
     path('quick-edit-qty/', views.quick_edit_qty, name='quick_edit_qty'),
+    
+    # Print
+    path('print/<str:session_id>/', views.print_ticket, name='print_ticket'),
+    path('print-job/<int:job_id>/status/', views.print_job_status, name='print_job_status'),
+    
+    # Local Print Agent API
+    path('api/print/pending/', views.print_agent_pending, name='print_agent_pending'),
+    path('api/print/<int:job_id>/report/', views.print_agent_report, name='print_agent_report'),
+    
+    # Cancellation
+    path('cancel-order/<str:session_id>/', views.cancel_order_group, name='cancel_order_group'),
+    
+    # Temporary endpoint for testing print agent
+    path('preview-ticket/<str:session_id>/', views.preview_ticket, name='preview_ticket'),
 ]

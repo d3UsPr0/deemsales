@@ -52,15 +52,30 @@
         {% endif %}
       </td>
       <td class="text-center">
-        {% if group.payment_status == 'closed' %}
-        <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}" 
-                style="background-color: #28a745; color: white;" title="Click to mark as unpaid">PAID</button>
-        {% elif group.payment_status == 'partial' %}
-        <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
-                style="background-color: #ffc107; color: #000;" title="Click to mark all as paid">MIXED</button>
+        {% if group.is_cancelled %}
+          <span class="badge" style="background-color: #6c757d;">
+            <i class="fas fa-ban"></i> CANCELLED
+          </span>
+          <br><small class="text-muted" style="font-size:10px;" title="{{ group.cancellation_reason }}">
+            {{ group.cancellation_reason|truncatechars:20 }}
+          </small>
         {% else %}
-        <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
-                style="background-color: #dc3545; color: white;" title="Click to mark as paid">UNPAID</button>
+          {% if group.is_printed %}
+          <span class="badge" style="background-color: #17a2b8; font-size:9px;">
+            <i class="fas fa-lock"></i> PRINTED
+          </span>
+          <br>
+          {% endif %}
+          {% if group.payment_status == 'closed' %}
+          <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}" 
+                  style="background-color: #28a745; color: white;" title="Mark unpaid">Paid</button>
+          {% elif group.payment_status == 'partial' %}
+          <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+                  style="background-color: #ffc107; color: #000;" title="Mark all paid">Mixed</button>
+          {% else %}
+          <button class="status-toggle-btn toggle-group-status" data-session-id="{{ group.session_id }}"
+                  style="background-color: #dc3545; color: white;" title="Mark paid">Unpaid</button>
+          {% endif %}
         {% endif %}
       </td>
       <td>
@@ -69,17 +84,106 @@
       </td>
       <td>
         <div class="btn-group btn-group-sm action-group">
-          {% if group.item_count > 1 %}
-          <button class="btn btn-info btn-sm view-group" data-session-id="{{ group.session_id }}" title="View"><i class="fas fa-eye"></i></button>
-          {% endif %}
-          <button class="btn btn-warning btn-sm edit-order-group" data-session-id="{{ group.session_id }}" title="Edit Order"><i class="fas fa-edit"></i></button>
-          <button class="btn btn-success btn-sm add-to-group" data-session-id="{{ group.session_id }}" title="Add Items"><i class="fas fa-plus"></i></button>
-          {% if group.is_group %}
-          <button class="btn btn-danger btn-sm delete-group" data-session-id="{{ group.session_id }}" title="Delete"><i class="fas fa-trash"></i></button>
-          {% else %}
-          <button class="btn btn-danger btn-sm delete-order" data-order-id="{{ group.first_order_id }}" title="Delete"><i class="fas fa-trash"></i></button>
-          {% endif %}
-        </div>
+  {% if group.is_cancelled %}
+    <span class="badge" style="background-color: #6c757d;">CANCELLED</span>
+  
+  {% elif group.payment_status == 'closed' %}
+    <!-- PAID: only view + reprint (locked) -->
+    {% if group.item_count > 1 %}
+    <button class="btn btn-info btn-sm view-group" data-session-id="{{ group.session_id }}" title="View">
+      <i class="fas fa-eye"></i>
+    </button>
+    {% endif %}
+    {% if group.is_printed %}
+    <div class="btn-group btn-group-sm">
+      <button class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" title="Reprint">
+        <i class="fas fa-redo"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;">
+        <li><a class="dropdown-item print-ticket-btn" href="#" 
+               data-session-id="{{ group.session_id }}" data-print-type="kitchen">
+               🍳 Reprint Kitchen</a></li>
+        <li><a class="dropdown-item print-ticket-btn" href="#" 
+               data-session-id="{{ group.session_id }}" data-print-type="receipt">
+               🧾 Reprint Receipt</a></li>
+      </ul>
+    </div>
+    {% endif %}
+    <span class="badge bg-success" style="padding:6px 10px;">
+      <i class="fas fa-lock"></i> Locked
+    </span>
+  
+  {% elif group.is_printed %}
+    <!-- PRINTED but UNPAID: reprint + mark paid + cancel -->
+    {% if group.item_count > 1 %}
+    <button class="btn btn-info btn-sm view-group" data-session-id="{{ group.session_id }}" title="View">
+      <i class="fas fa-eye"></i>
+    </button>
+    {% endif %}
+    <div class="btn-group btn-group-sm">
+      <button class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" title="Reprint">
+        <i class="fas fa-redo"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;">
+        <li><a class="dropdown-item print-ticket-btn" href="#" 
+               data-session-id="{{ group.session_id }}" data-print-type="kitchen">
+               🍳 Reprint Kitchen</a></li>
+        <li><a class="dropdown-item print-ticket-btn" href="#" 
+               data-session-id="{{ group.session_id }}" data-print-type="receipt">
+               🧾 Reprint Receipt</a></li>
+      </ul>
+    </div>
+    <button class="btn btn-success btn-sm toggle-group-status" 
+            data-session-id="{{ group.session_id }}" title="Mark as Paid">
+      <i class="fas fa-check"></i>
+    </button>
+    <button class="btn btn-danger btn-sm cancel-order-btn"
+            data-session-id="{{ group.session_id }}"
+            data-reference="{{ group.reference }}"
+            title="Cancel Order">
+      <i class="fas fa-ban"></i>
+    </button>
+  
+  {% else %}
+    <!-- ACTIVE: full actions -->
+    {% if group.item_count > 1 %}
+    <button class="btn btn-info btn-sm view-group" data-session-id="{{ group.session_id }}" title="View">
+      <i class="fas fa-eye"></i>
+    </button>
+    {% endif %}
+    
+    <button class="btn btn-warning btn-sm edit-order-group" data-session-id="{{ group.session_id }}" title="Edit Order">
+      <i class="fas fa-edit"></i>
+    </button>
+    
+    <button class="btn btn-success btn-sm add-to-group" data-session-id="{{ group.session_id }}" title="Add Items">
+      <i class="fas fa-plus"></i>
+    </button>
+    
+    <!-- PRINT DROPDOWN -->
+    <div class="btn-group btn-group-sm">
+      <button class="btn btn-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" title="Print">
+        <i class="fas fa-print"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" style="font-size:12px;">
+        <li><a class="dropdown-item print-ticket-btn" href="#" 
+               data-session-id="{{ group.session_id }}" data-print-type="kitchen">
+               🍳 Kitchen Ticket</a></li>
+        <li><a class="dropdown-item print-ticket-btn" href="#" 
+               data-session-id="{{ group.session_id }}" data-print-type="receipt">
+               🧾 Customer Receipt</a></li>
+      </ul>
+    </div>
+    
+    <!-- CANCEL (replaces delete) -->
+    <button class="btn btn-danger btn-sm cancel-order-btn"
+            data-session-id="{{ group.session_id }}"
+            data-reference="{{ group.reference }}"
+            title="Cancel Order">
+      <i class="fas fa-ban"></i>
+    </button>
+  {% endif %}
+</div>
       </td>
     </tr>
 
@@ -104,20 +208,25 @@
               <td><strong>{{ item.menu_item.name }}</strong></td>
               <td><span class="badge" style="background-color: var(--accent);">{{ item.category.name }}</span></td>
               <td class="text-center"><span class="badge bg-primary">{{ item.quantity }}</span></td>
-              <td class="text-end">{{ item.unit_price|floatformat:"0"|intcomma}} </td>
+              <td class="text-end">{{ item.unit_price|floatformat:"0"|intcomma }}</td>
               <td class="text-end fw-bold text-success">{{ item.total_price|floatformat:"0"|intcomma }}</td>
               <td>
-                <button class="btn btn-outline-warning btn-sm breakdown-edit-btn" 
-        data-session-id="{{ group.session_id }}"
-        data-item-id="{{ item.menu_item.id }}"
-        data-item-name="{{ item.menu_item.name }}"
-        data-unit-price="{{ item.unit_price }}"
-        data-current-qty="{{ item.quantity }}"
-        title="Edit Quantity">
+  {% if not group.is_locked and group.payment_status != 'closed' %}
+  <button class="btn btn-outline-warning btn-sm breakdown-edit-btn" 
+          data-session-id="{{ group.session_id }}"
+          data-item-id="{{ item.menu_item.id }}"
+          data-item-name="{{ item.menu_item.name }}"
+          data-unit-price="{{ item.unit_price }}"
+          data-current-qty="{{ item.quantity }}"
+          title="Edit Quantity">
     <i class="fas fa-edit"></i>
-</button>
-                <button class="btn btn-outline-danger btn-sm delete-order" data-order-id="{{ item.order_ids.0 }}" title="Delete"><i class="fas fa-trash"></i></button>
-              </td>
+  </button>
+  {% else %}
+  <span class="text-muted" style="font-size:11px;">
+    <i class="fas fa-lock"></i> Locked
+  </span>
+  {% endif %}
+</td>
             </tr>
             {% endfor %}
           </tbody>

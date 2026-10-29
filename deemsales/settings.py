@@ -82,3 +82,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SESSION_COOKIE_AGE = 300  # 5 minutes in seconds
 SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# ============================================================
+# PRINT AGENT CONFIGURATION
+# ============================================================
+# Secret key the local print agent uses to authenticate
+# CHANGE THIS IN PRODUCTION - use a long random string
+PRINT_AGENT_KEY = 'print-deem-order'

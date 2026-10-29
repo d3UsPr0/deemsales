@@ -543,6 +543,42 @@
     </div>
   </div>
 </div>
+
+<!-- Cancel Order Modal -->
+<div class="modal fade" id="cancelOrderModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-ban"></i> Cancel Order <span id="cancelRef"></span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-warning" style="font-size:13px;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <strong>This cannot be undone!</strong>
+          The order will be excluded from all sales reports and totals.
+        </div>
+        <form id="cancelOrderForm">
+          {% csrf_token %}
+          <input type="hidden" name="session_id" id="cancelSessionId">
+          <label class="form-label fw-bold">Cancellation Reason <span class="text-danger">*</span></label>
+          <textarea class="form-control form-control-sm" name="reason" id="cancelReason" 
+                    rows="3" required minlength="5" maxlength="500"
+                    placeholder="e.g., Customer changed mind, wrong order, printer error, etc."></textarea>
+          <small class="text-muted">Minimum 5 characters</small>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Keep Order</button>
+        <button type="button" class="btn btn-danger btn-sm" id="confirmCancelBtn">
+          <i class="fas fa-ban"></i> Cancel Order Permanently
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
@@ -1024,5 +1060,114 @@ $('#bq_save').click(function() {
         }
     });
 });
+
+// ============ PRINT TICKET ============
+$(document).on('click', '.print-ticket-btn', function(e) {
+    e.preventDefault();
+    var $btn = $(this);
+    var sessionId = $btn.data('session-id');
+    var printType = $btn.data('print-type');
+    
+    var originalHtml = $btn.html();
+    $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+    
+    $.ajax({
+        url: '/print/' + sessionId + '/',
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        data: { print_type: printType },
+        success: function(data) {
+            if (data.success) {
+                var label = printType === 'kitchen' ? 'Kitchen Ticket' : 'Customer Receipt';
+                showToast('🖨️ ' + label + ' sent', data.reference + ' — printing...');
+                pollPrintStatus(data.job_id, $btn, originalHtml);
+            } else {
+                alert('Error: ' + (data.error || 'Unknown'));
+                $btn.prop('disabled', false).html(originalHtml);
+            }
+        },
+        error: function(xhr) {
+            alert('Print failed: ' + (xhr.responseJSON?.error || 'Unknown'));
+            $btn.prop('disabled', false).html(originalHtml);
+        }
+    });
+});
+
+function pollPrintStatus(jobId, $btn, originalHtml) {
+    var attempts = 0;
+    var maxAttempts = 30;
+    
+    var interval = setInterval(function() {
+        attempts++;
+        $.get('/print-job/' + jobId + '/status/', function(data) {
+            if (data.status === 'printed') {
+                clearInterval(interval);
+                $btn.html('<i class="fas fa-check-circle"></i>')
+                    .removeClass('btn-secondary').addClass('btn-success')
+                    .prop('disabled', false);
+                showToast('✅ Printed', data.reference + ' at ' + data.printed_at);
+                setTimeout(function() { location.reload(); }, 1500);
+            } else if (data.status === 'failed') {
+                clearInterval(interval);
+                $btn.html(originalHtml).prop('disabled', false);
+                showToast('❌ Print failed', data.error || 'Check printer', 'error');
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                $btn.html(originalHtml).prop('disabled', false);
+                showToast('⏱️ Timeout', 'Check if printer is online', 'warning');
+            }
+        });
+    }, 2000);
+}
+
+// ============ CANCEL ORDER ============
+$(document).on('click', '.cancel-order-btn', function() {
+    $('#cancelSessionId').val($(this).data('session-id'));
+    $('#cancelRef').text($(this).data('reference'));
+    $('#cancelReason').val('');
+    $('#cancelOrderModal').modal('show');
+});
+
+$('#confirmCancelBtn').click(function() {
+    var sessionId = $('#cancelSessionId').val();
+    var reason = $('#cancelReason').val().trim();
+    
+    if (reason.length < 5) {
+        alert('Please provide a reason (min 5 characters)');
+        return;
+    }
+    
+    var $btn = $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Cancelling...');
+    
+    $.ajax({
+        url: '/cancel-order/' + sessionId + '/',
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        data: { reason: reason },
+        success: function(data) {
+            $('#cancelOrderModal').modal('hide');
+            showToast('🚫 Cancelled', data.message, 'error');
+            setTimeout(function() { location.reload(); }, 1200);
+        },
+        error: function(xhr) {
+            alert('Error: ' + (xhr.responseJSON?.error || 'Unknown'));
+            $btn.prop('disabled', false).html('<i class="fas fa-ban"></i> Cancel Order Permanently');
+        }
+    });
+});
+
+// ============ TOAST ============
+function showToast(title, message, type) {
+    var bg = type === 'error' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#28a745';
+    var fg = type === 'warning' ? '#000' : '#fff';
+    var $toast = $('<div><strong>' + title + '</strong><br><small>' + message + '</small></div>').css({
+        position: 'fixed', bottom: '20px', right: '20px',
+        background: bg, color: fg, padding: '12px 20px',
+        borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+        zIndex: 9999, fontSize: '13px', maxWidth: '320px'
+    });
+    $('body').append($toast);
+    setTimeout(function() { $toast.fadeOut(400, function() { $toast.remove(); }); }, 3500);
+}
 </script>
 {% endblock %}

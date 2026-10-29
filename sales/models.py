@@ -69,6 +69,15 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     session_id = models.CharField(max_length=100, blank=True, null=True)
+    is_printed = models.BooleanField(default=False, help_text="Set to True after first print")
+    printed_at = models.DateTimeField(null=True, blank=True)
+    is_cancelled = models.BooleanField(default=False)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='cancelled_orders'
+    )
+    cancellation_reason = models.TextField(blank=True, null=True)
     group_id = models.IntegerField(null=True, blank=True, db_index=True, help_text="Stable reference for the order group")
     
     class Meta:
@@ -99,6 +108,10 @@ class Order(models.Model):
             return f"{self.get_location_type_display()} #{self.location_detail}"
         else:
             return self.get_location_type_display()
+    @property
+    def is_locked(self):
+        """Locked = cannot edit/add/delete"""
+        return self.is_printed or self.is_cancelled    
 
 
 class UserProfile(models.Model):
@@ -204,6 +217,15 @@ class AuditLog(models.Model):
         ('delete', 'Delete'),
     ]
     
+    MODEL_CHOICES = [
+        ('Order', 'Order'),
+        ('MenuItem', 'Menu Item'),
+        ('MenuCategory', 'Menu Category'),
+        ('Expense', 'Expense'),
+        ('User', 'User'),
+        ('PrintJob', 'Print Job'),
+    ]
+    
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     model_name = models.CharField(max_length=50)
     object_id = models.CharField(max_length=50)
@@ -249,3 +271,39 @@ class AuditLog(models.Model):
                     'after': after,
                 })
         return changed
+    
+class PrintJob(models.Model):
+    """Track every print request (kitchen or customer)"""
+    TYPE_CHOICES = [
+        ('kitchen', 'Kitchen Ticket'),
+        ('receipt', 'Customer Receipt'),
+    ]
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('sent', 'Sent to Agent'),
+        ('printed', 'Printed'),
+        ('failed', 'Failed'),
+    ]
+    
+    session_id = models.CharField(max_length=100, db_index=True)
+    reference = models.CharField(max_length=20)
+    print_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    requested_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    printed_at = models.DateTimeField(null=True, blank=True)
+    
+    error_message = models.CharField(max_length=255, blank=True, null=True)
+    retry_count = models.IntegerField(default=0)
+    ticket_text = models.TextField(blank=True, null=True, help_text="Snapshot of the ticket")
+    
+    class Meta:
+        ordering = ['-requested_at']
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['session_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.reference} - {self.get_print_type_display()} - {self.get_status_display()}"

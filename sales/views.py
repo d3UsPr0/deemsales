@@ -11,8 +11,9 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from functools import wraps
 from collections import defaultdict, OrderedDict
-
 from django.contrib.auth.models import User
+import json
+from .models import PrintJob
 from .models import (
     MenuCategory, MenuItem, Order, UserProfile, Expense, AuditLog
 )
@@ -146,7 +147,8 @@ def home_view(request):
         base_orders = base_orders.filter(waiter_user=request.user)
     
     today_orders = base_orders.filter(
-        created_at__date=today
+        created_at__date=today,
+        is_cancelled=False  # ← Exclude cancelled
     ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
     
     # ============================================================
@@ -212,6 +214,10 @@ def home_view(request):
             'first_order_id': orders[-1].group_id or orders[-1].id,
             'last_order_id': orders[0].id,
             'payment_status': payment_status,
+            'is_printed': first.is_printed,
+            'is_cancelled': first.is_cancelled,
+            'is_locked': first.is_locked,
+            'cancellation_reason': first.cancellation_reason if first.is_cancelled else '',
         })
         order_number += 1
     
@@ -234,7 +240,7 @@ def home_view(request):
     # ============================================================
     unpaid_orders = base_orders.filter(
         status='open',
-        # is_cancelled=False  # ← add this in V2
+        is_cancelled=False  # ← Exclude cancelled
     ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
     
     unpaid_groups = defaultdict(list)
@@ -287,6 +293,10 @@ def home_view(request):
             'first_order_id': orders[-1].group_id or orders[-1].id,
             'last_order_id': orders[0].id,
             'days_old': (today - first.created_at.date()).days,
+            'is_printed': first.is_printed,
+            'is_cancelled': first.is_cancelled,
+            'is_locked': first.is_locked,
+            'cancellation_reason': first.cancellation_reason if first.is_cancelled else '',
         })
         unpaid_num += 1
     
@@ -514,6 +524,17 @@ def quick_edit_qty(request):
         if not orders.exists():
             return JsonResponse({'error': 'Item not found'}, status=404)
         
+        # LOCK CHECK
+        first = orders.first()
+        if first.is_printed:
+            return JsonResponse({'error': 'Cannot modify a printed order.'}, status=400)
+        if first.is_cancelled:
+            return JsonResponse({'error': 'Cannot modify a cancelled order.'}, status=400)
+        
+        # PAID CHECK
+        if all(o.status == 'closed' for o in orders):
+            return JsonResponse({'error': 'Cannot modify a PAID order. Mark it as UNPAID first.'}, status=400)
+        
         if new_qty <= 0:
             orders.delete()
             remaining = Order.objects.filter(session_id=session_id)
@@ -521,7 +542,6 @@ def quick_edit_qty(request):
                 return JsonResponse({'success': True, 'message': 'Item removed. Order is now empty.'})
             return JsonResponse({'success': True, 'message': 'Item removed'})
         
-        first = orders.first()
         first.quantity = new_qty
         first.total_price = first.unit_price * new_qty
         first.save()
@@ -540,6 +560,15 @@ def delete_order(request, order_id):
     if request.method == 'POST':
         order = get_object_or_404(Order, id=order_id)
         
+        # LOCK CHECK
+        if order.is_printed:
+            messages.error(request, 'Cannot delete a printed order. Use Cancel instead.')
+            return redirect('home')
+        
+        if order.is_cancelled:
+            messages.error(request, 'Cannot delete a cancelled order.')
+            return redirect('home')
+        
         from .audit import serialize_instance, log_action
         data_before = serialize_instance(order)
         log_action(request, 'delete', order, data_before=data_before)
@@ -555,6 +584,19 @@ def delete_group_orders(request, session_id):
     if request.method == 'POST':
         orders = Order.objects.filter(session_id=session_id)
         count = orders.count()
+        
+        if count == 0:
+            messages.error(request, 'Order not found.')
+            return redirect('home')
+        
+        # LOCK CHECK
+        if orders.filter(is_printed=True).exists():
+            messages.error(request, 'Cannot delete a printed order. Use Cancel instead.')
+            return redirect('home')
+        
+        if orders.filter(is_cancelled=True).exists():
+            messages.error(request, 'Cannot delete a cancelled order.')
+            return redirect('home')
         
         from .audit import serialize_instance, log_action
         for order in orders:
@@ -643,6 +685,20 @@ def add_to_order(request, session_id):
                 
                 if not existing_order:
                     messages.error(request, 'Order not found!')
+                    return redirect('home')
+                
+                # LOCK CHECK
+                if existing_order.is_printed:
+                    messages.error(request, 'Cannot add items to a printed order.')
+                    return redirect('home')
+                
+                if existing_order.is_cancelled:
+                    messages.error(request, 'Cannot add items to a cancelled order.')
+                    return redirect('home')
+                
+                # PAID CHECK — cannot add to paid orders
+                if all(o.status == 'closed' for o in existing_orders):
+                    messages.error(request, 'Cannot add items to a PAID order. Mark it as UNPAID first.')
                     return redirect('home')
                 
                 existing_by_item = defaultdict(list)
@@ -789,6 +845,20 @@ def update_order_group(request, session_id):
                     messages.error(request, 'Order not found!')
                     return redirect('home')
                 
+                # LOCK CHECK
+                if existing_orders.filter(is_printed=True).exists():
+                    messages.error(request, 'Cannot modify a printed order. Use cancel/reprint.')
+                    return redirect('home')
+                
+                if existing_orders.filter(is_cancelled=True).exists():
+                    messages.error(request, 'Cannot modify a cancelled order.')
+                    return redirect('home')
+                
+                # PAID CHECK — cannot modify paid orders
+                if all(o.status == 'closed' for o in existing_orders):
+                    messages.error(request, 'Cannot modify a PAID order. Mark it as UNPAID first.')
+                    return redirect('home')
+                
                 first = existing_orders.first()
                 
                 # Waiter assignment
@@ -865,7 +935,8 @@ def update_order_group(request, session_id):
                             notes=notes,
                             status=first.status,
                             created_by=request.user,
-                            session_id=session_id
+                            session_id=session_id,
+                            group_id=first.group_id
                         )
                 
                 # Update on all remaining rows
@@ -944,9 +1015,11 @@ def export_excel(request):
             date_to = today
             label = f"Today ({today})"
     
+    # Exclude cancelled — they go to their own sheet
     orders = Order.objects.filter(
         created_at__date__gte=date_from,
-        created_at__date__lte=date_to
+        created_at__date__lte=date_to,
+        is_cancelled=False
     ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
     
     expenses = Expense.objects.filter(
@@ -1247,6 +1320,75 @@ def export_excel(request):
     )
     filename = f"DEEM_Report_{date_from}_to_{date_to}.xlsx" if date_from != date_to else f"DEEM_Report_{date_from}.xlsx"
     response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+        # ===== SHEET 5: CANCELLED ORDERS =====
+    cancelled_orders = Order.objects.filter(
+        is_cancelled=True,
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    ).select_related('menu_item', 'waiter_user', 'created_by', 'cancelled_by').order_by('-cancelled_at')
+    
+    ws5 = wb.create_sheet("Cancelled Orders")
+    
+    ws5.merge_cells('A1:H1')
+    ws5['A1'].value = f"DEEM Restaurant - Cancelled Orders ({label})"
+    ws5['A1'].font = Font(size=14, bold=True, color="FFFFFF")
+    ws5['A1'].fill = danger_fill
+    ws5['A1'].alignment = Alignment(horizontal='center')
+    
+    headers5 = ['Reference', 'Order Date', 'Menu Items', 'Qty', 'Amount (TZS)', 
+                'Waiter', 'Cancelled At', 'Cancelled By', 'Reason']
+    for col, header in enumerate(headers5, 1):
+        cell = ws5.cell(row=3, column=col, value=header)
+        cell.font = white_font
+        cell.fill = danger_fill
+        cell.border = border
+        cell.alignment = Alignment(horizontal='center')
+    
+    cancelled_groups = defaultdict(list)
+    for co in cancelled_orders:
+        session_key = co.session_id if co.session_id else f"single_{co.id}"
+        cancelled_groups[session_key].append(co)
+    
+    row5 = 4
+    cancelled_total = 0
+    for session_key, co_list in cancelled_groups.items():
+        first_co = co_list[0]
+        combined = OrderedDict()
+        for o in co_list:
+            key = o.menu_item.name
+            combined[key] = combined.get(key, 0) + o.quantity
+        
+        items_str = ", ".join([f"{name} x{qty}" if qty > 1 else name for name, qty in combined.items()])
+        total_qty = sum(o.quantity for o in co_list)
+        total_amt = sum(float(o.total_price) for o in co_list)
+        cancelled_total += total_amt
+        
+        ws5.cell(row=row5, column=1, value=f"#{first_co.group_id or first_co.id}").border = border
+        ws5.cell(row=row5, column=2, value=first_co.created_at.strftime('%d/%m/%Y %H:%M')).border = border
+        ws5.cell(row=row5, column=3, value=items_str).border = border
+        ws5.cell(row=row5, column=4, value=total_qty).border = border
+        ws5.cell(row=row5, column=5, value=total_amt).border = border
+        ws5.cell(row=row5, column=6, value=first_co.get_waiter_display_name()).border = border
+        ws5.cell(row=row5, column=7, value=first_co.cancelled_at.strftime('%d/%m/%Y %H:%M') if first_co.cancelled_at else '-').border = border
+        ws5.cell(row=row5, column=8, value=first_co.cancelled_by.username if first_co.cancelled_by else '-').border = border
+        ws5.cell(row=row5, column=9, value=first_co.cancellation_reason or '-').border = border
+        
+        row5 += 1
+    
+    if cancelled_groups:
+        ws5.merge_cells(f'A{row5}:D{row5}')
+        ws5.cell(row=row5, column=1, value="TOTAL CANCELLED (Excluded from Sales)").font = Font(bold=True, color="FFFFFF")
+        ws5.cell(row=row5, column=1).fill = danger_fill
+        ws5.cell(row=row5, column=1).border = border
+        ws5.cell(row=row5, column=5, value=cancelled_total).font = Font(bold=True, color="FFFFFF")
+        ws5.cell(row=row5, column=5).fill = danger_fill
+        ws5.cell(row=row5, column=5).border = border
+    
+    for col in range(1, 10):
+        ws5.column_dimensions[get_column_letter(col)].width = 20
+    ws5.column_dimensions['C'].width = 40
+    ws5.column_dimensions['I'].width = 40
     
     wb.save(response)
     return response
@@ -1615,8 +1757,7 @@ def expenses_view(request):
     expenses = Expense.objects.filter(date=selected_date).select_related('recorded_by')
     today_expenses = Expense.objects.filter(date=today)
     today_expense_total = sum(float(e.amount) for e in today_expenses)
-    # today_orders = Order.objects.filter(created_at__date=today, is_cancelled=False)
-    today_orders = Order.objects.filter(created_at__date=today)
+    today_orders = Order.objects.filter(created_at__date=today, is_cancelled=False)
     today_sales = sum(float(o.total_price) for o in today_orders)
     
     context = {
@@ -1799,7 +1940,8 @@ def get_orders_page(request):
     
     if tab == 'latest':
         today_orders = base_orders.filter(
-            created_at__date=today
+            created_at__date=today,
+            is_cancelled=False
         ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
         
         grouped = _build_grouped_list(today_orders, today)
@@ -1812,7 +1954,8 @@ def get_orders_page(request):
         }, request=request)
     else:  # unpaid
         unpaid_orders = base_orders.filter(
-            status='open'
+            status='open',
+            is_cancelled=False
         ).select_related('menu_item', 'waiter_user', 'created_by').order_by('-created_at')
         
         grouped = _build_grouped_list(unpaid_orders, today, is_unpaid=True)
@@ -1879,6 +2022,10 @@ def _build_grouped_list(orders_qs, today, is_unpaid=False):
             'first_order_id': orders[-1].group_id or orders[-1].id,
             'last_order_id': orders[0].id,
             'payment_status': payment_status,
+            'is_printed': first.is_printed,
+            'is_cancelled': first.is_cancelled,
+            'is_locked': first.is_locked,
+            'cancellation_reason': first.cancellation_reason if first.is_cancelled else '',
         }
         
         if is_unpaid:
@@ -1891,3 +2038,320 @@ def _build_grouped_list(orders_qs, today, is_unpaid=False):
         g['order_number'] = idx
     
     return result
+
+# ============================================================
+# PRINT SYSTEM
+# ============================================================
+
+@login_required
+def print_ticket(request, session_id):
+    """Create a print job for kitchen or customer ticket"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        print_type = request.POST.get('print_type', 'kitchen')
+        if print_type not in ['kitchen', 'receipt']:
+            return JsonResponse({'error': 'Invalid print type'}, status=400)
+        
+        orders = Order.objects.filter(session_id=session_id).select_related(
+            'menu_item', 'menu_item__category', 'waiter_user'
+        )
+        
+        if not orders.exists():
+            return JsonResponse({'error': 'Order not found'}, status=404)
+        
+        if orders.filter(is_cancelled=True).exists():
+            return JsonResponse({'error': 'Cannot print a cancelled order'}, status=400)
+        
+        first = orders.first()
+        
+        # Build the ticket text
+        if print_type == 'kitchen':
+            ticket_text = build_kitchen_ticket(orders, first)
+        else:
+            ticket_text = build_customer_receipt(orders, first)
+        
+        job = PrintJob.objects.create(
+            session_id=session_id,
+            reference=first.reference or f"ORD-{first.id}",
+            print_type=print_type,
+            status='pending',
+            requested_by=request.user,
+            ticket_text=ticket_text,
+        )
+        
+        # Lock the order after first print (any type)
+        if not first.is_printed:
+            orders.update(is_printed=True, printed_at=timezone.now())
+        
+        return JsonResponse({
+            'success': True,
+            'job_id': job.id,
+            'reference': job.reference,
+            'print_type': print_type,
+            'status': job.status,
+        })
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+def build_kitchen_ticket(orders, first_order):
+    """Kitchen ticket — no prices, focus on what to cook"""
+    from io import StringIO
+    from collections import OrderedDict
+    
+    out = StringIO()
+    W = 42  # 80mm width
+    
+    combined = OrderedDict()
+    for o in orders:
+        key = o.menu_item.id
+        if key in combined:
+            combined[key]['quantity'] += o.quantity
+        else:
+            combined[key] = {
+                'name': o.menu_item.name,
+                'quantity': o.quantity,
+            }
+    
+    total_qty = sum(i['quantity'] for i in combined.values())
+    ref = first_order.reference or f"ORD-{first_order.id}"
+    time_str = first_order.created_at.strftime('%H:%M')
+    waiter = first_order.get_waiter_display_name()
+    
+    if first_order.location_type == 'other':
+        location = first_order.location_detail or 'Other'
+    elif first_order.location_detail:
+        location = f"{first_order.get_location_type_display()} #{first_order.location_detail}"
+    else:
+        location = first_order.get_location_type_display()
+    
+    out.write('=' * W + '\n')
+    out.write('KITCHEN TICKET'.center(W) + '\n')
+    out.write(ref.center(W) + '\n')
+    out.write('=' * W + '\n')
+    out.write(f"Time: {time_str}  |  Waiter: {waiter}\n")
+    out.write(f"Place: {location}  |  Items: {total_qty}\n")
+    out.write('-' * W + '\n')
+    out.write(f"{'QTY':>4}  ITEM\n")
+    out.write('-' * W + '\n')
+    
+    for item in combined.values():
+        out.write(f"{item['quantity']:>4}  {item['name']}\n")
+    
+    out.write('-' * W + '\n')
+    
+    if first_order.notes:
+        out.write('NOTES:\n')
+        for line in first_order.notes.split('\n'):
+            out.write(f"  {line}\n")
+        out.write('-' * W + '\n')
+    
+    out.write('\n\n\n')
+    return out.getvalue()
+
+
+def build_customer_receipt(orders, first_order):
+    """Customer receipt — with prices and total"""
+    from io import StringIO
+    from collections import OrderedDict
+    
+    out = StringIO()
+    W = 42
+    
+    combined = OrderedDict()
+    for o in orders:
+        key = o.menu_item.id
+        if key in combined:
+            combined[key]['quantity'] += o.quantity
+            combined[key]['total'] += float(o.total_price)
+        else:
+            combined[key] = {
+                'name': o.menu_item.name,
+                'quantity': o.quantity,
+                'unit_price': float(o.unit_price),
+                'total': float(o.total_price),
+            }
+    
+    total_qty = sum(i['quantity'] for i in combined.values())
+    total_amount = sum(i['total'] for i in combined.values())
+    ref = first_order.reference or f"ORD-{first_order.id}"
+    time_str = first_order.created_at.strftime('%H:%M')
+    waiter = first_order.get_waiter_display_name()
+    
+    if first_order.location_type == 'other':
+        location = first_order.location_detail or 'Other'
+    elif first_order.location_detail:
+        location = f"{first_order.get_location_type_display()} #{first_order.location_detail}"
+    else:
+        location = first_order.get_location_type_display()
+    
+    out.write('=' * W + '\n')
+    out.write('DEEM RESTAURANT'.center(W) + '\n')
+    out.write('Dar es Salaam'.center(W) + '\n')
+    out.write('+255 665 304 561'.center(W) + '\n')
+    out.write('=' * W + '\n')
+    out.write(f"Receipt: {ref}\n")
+    out.write(f"Time: {time_str}  |  Waiter: {waiter}\n")
+    out.write(f"Place: {location}\n")
+    out.write('-' * W + '\n')
+    out.write(f"{'ITEM':<20} {'QTY':>4} {'AMOUNT':>12}\n")
+    out.write('-' * W + '\n')
+    
+    for item in combined.values():
+        name = item['name'][:20]
+        out.write(f"{name:<20} {item['quantity']:>4} {item['total']:>12,.0f}\n")
+    
+    out.write('-' * W + '\n')
+    out.write(f"{'TOTAL':<20} {total_qty:>4} {total_amount:>12,.0f}\n")
+    out.write('=' * W + '\n')
+    out.write('Asante! Karibu tena'.center(W) + '\n')
+    out.write('=' * W + '\n')
+    out.write(f"Printed: {timezone.now().strftime('%H:%M:%S')}".rjust(W) + '\n')
+    out.write('\n\n\n')
+    return out.getvalue()
+
+
+@login_required
+def print_job_status(request, job_id):
+    """Poll status of a print job"""
+    try:
+        job = PrintJob.objects.get(id=job_id)
+        return JsonResponse({
+            'id': job.id,
+            'status': job.status,
+            'reference': job.reference,
+            'print_type': job.print_type,
+            'error': job.error_message,
+            'printed_at': job.printed_at.strftime('%H:%M:%S') if job.printed_at else None,
+        })
+    except PrintJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+
+
+def _check_agent_key(request):
+    """Verify the local print agent's secret"""
+    from django.conf import settings
+    key = request.headers.get('X-Print-Agent-Key', '')
+    return key == getattr(settings, 'PRINT_AGENT_KEY', '')
+
+
+def print_agent_pending(request):
+    """Agent polls for pending jobs"""
+    if not _check_agent_key(request):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    jobs = PrintJob.objects.filter(status='pending').order_by('requested_at')[:10]
+    
+    payload = []
+    for job in jobs:
+        payload.append({
+            'job_id': job.id,
+            'reference': job.reference,
+            'print_type': job.print_type,
+            'ticket_text': job.ticket_text or '',
+        })
+        job.status = 'sent'
+        job.save(update_fields=['status'])
+    
+    return JsonResponse({'jobs': payload})
+
+
+def print_agent_report(request, job_id):
+    """Agent reports print result"""
+    if not _check_agent_key(request):
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        job = PrintJob.objects.get(id=job_id)
+        data = json.loads(request.body)
+        status = data.get('status', 'failed')
+        error = data.get('error', '')
+        
+        if status == 'printed':
+            job.status = 'printed'
+            job.printed_at = timezone.now()
+            job.error_message = None
+        else:
+            job.status = 'failed'
+            job.error_message = error[:255]
+            job.retry_count += 1
+        
+        job.save()
+        return JsonResponse({'success': True})
+    
+    except PrintJob.DoesNotExist:
+        return JsonResponse({'error': 'Job not found'}, status=404)
+    
+@login_required
+def cancel_order_group(request, session_id):
+    """Cancel an entire order group — irreversible, requires reason"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+    
+    try:
+        reason = request.POST.get('reason', '').strip()
+        
+        if not reason or len(reason) < 5:
+            return JsonResponse({'error': 'Cancellation reason required (min 5 characters)'}, status=400)
+        
+        orders = Order.objects.filter(session_id=session_id)
+        if not orders.exists():
+            return JsonResponse({'error': 'Order not found'}, status=404)
+        
+        if orders.filter(is_cancelled=True).exists():
+            return JsonResponse({'error': 'Order already cancelled'}, status=400)
+        
+        # NEW: Cannot cancel PAID order
+        all_paid = all(o.status == 'closed' for o in orders)
+        if all_paid:
+            return JsonResponse({
+                'error': 'Cannot cancel a PAID order. Mark it as UNPAID first.'
+            }, status=400)
+        
+        orders.update(
+            status='cancelled',
+            is_cancelled=True,
+            cancelled_at=timezone.now(),
+            cancelled_by=request.user,
+            cancellation_reason=reason,
+        )
+        
+        # Log to audit
+        from .audit import log_action
+        first = orders.first()
+        log_action(request, 'update', first, data_before={}, 
+                   notes=f'CANCELLED: {reason}')
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Order cancelled. Reason: {reason}',
+        })
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+    
+
+# Temporary for printing testing purpose
+@login_required
+def preview_ticket(request, session_id):
+    """Preview the ticket text in browser (for testing without printer)"""
+    print_type = request.GET.get('type', 'kitchen')
+    orders = Order.objects.filter(session_id=session_id).select_related('menu_item', 'menu_item__category', 'waiter_user')
+    
+    if not orders.exists():
+        return HttpResponse('Order not found', status=404)
+    
+    first = orders.first()
+    
+    if print_type == 'kitchen':
+        text = build_kitchen_ticket(orders, first)
+    else:
+        text = build_customer_receipt(orders, first)
+    
+    return HttpResponse(text, content_type='text/plain; charset=utf-8')
